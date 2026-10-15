@@ -1,0 +1,89 @@
+{% extends "base.html" %}
+{% block titulo %}Relatórios{% endblock %}
+{% block topbar_titulo %}Relatórios{% endblock %}
+
+{% block conteudo %}
+
+<section class="banner-pagina">
+  <div class="rotulo">Exportação de dados</div>
+  <h1>Relatórios</h1>
+  <p>Gere relatórios em PDF, Excel ou CSV — sempre só com ONGs aprovadas{% if escopo_provincia %}, limitado a {{ escopo_provincia }}{% endif %}.</p>
+</section>
+
+<form method="get" id="formRelatorio" class="barra-filtros">
+  {% if escopo_provincia %}
+  <div class="campo-formulario" style="flex:1 1 200px;">
+    <label>Província</label>
+    <div class="form-control form-control-sm bg-light">{{ escopo_provincia }} <i class="bi bi-lock-fill text-muted"></i></div>
+  </div>
+  {% else %}
+  <div class="campo-formulario" style="flex:1 1 200px;">
+    <label for="provincia">Província</label>
+    <select class="form-select form-select-sm" id="provincia" name="provincia">
+      <option value="">Todas</option>
+      {% for p in provincias %}
+      <option value="{{ p }}">{{ p }}</option>
+      {% endfor %}
+    </select>
+  </div>
+  {% endif %}
+  <div class="campo-formulario" style="flex:1 1 200px;">
+    <label for="area_id">Área temática</label>
+    <select class="form-select form-select-sm" id="area_id" name="area_id">
+      <option value="">Todas</option>
+      {% for a in areas %}
+      <option value="{{ a.id }}">{{ a.nome }}</option>
+      {% endfor %}
+    </select>
+  </div>
+  <div class="campo-formulario" style="flex:1 1 150px;">
+    <label for="natureza">Natureza</label>
+    <select class="form-select form-select-sm" id="natureza" name="natureza">
+      <option value="">Todas</option>
+      <option value="ONG">ONG</option><option value="OSC">OSC</option><option value="Fundação">Fundação</option>
+    </select>
+  </div>
+  <div class="campo-formulario" style="flex:1 1 150px;">
+    <label for="origem">Origem</label>
+    <select class="form-select form-select-sm" id="origem" name="origem">
+      <option value="">Todas</option>
+      <option value="Nacional">Nacional</option><option value="Estrangeira">Estrangeira</option>
+    </select>
+  </div>
+  <div class="campo-formulario" style="flex:1 1 150px;">
+    <label for="desde">Registadas desde</label>
+    <input type="date" class="form-control form-control-sm" id="desde" name="desde">
+  </div>
+  <div class="campo-formulario" style="flex:1 1 150px;">
+    <label for="ate">Registadas até</label>
+    <input type="date" class="form-control form-control-sm" id="ate" name="ate">
+  </div>
+</form>
+
+<h2 style="font-size:1.15rem; margin-top:1.5rem;">Exportar com estes filtros</h2>
+<div class="grelha-cartoes">
+  <div class="cartao">
+    <h3><i class="bi bi-file-earmark-pdf" style="color:var(--terracota);"></i> Relatório Nacional (PDF)</h3>
+    <p>Capa institucional, indicadores-chave, gráficos por província e área, e listagem completa.</p>
+    <button type="button" class="btn btn-primary btn-sm" onclick="exportar('{{ url_for('relatorio_pdf') }}')">Gerar PDF</button>
+  </div>
+  <div class="cartao">
+    <h3><i class="bi bi-file-earmark-excel" style="color:#1E5B36;"></i> Excel completo</h3>
+    <p>Folha de resumo com indicadores + folha com a listagem completa (filtrável no próprio Excel).</p>
+    <button type="button" class="btn btn-outline-secondary btn-sm" onclick="exportar('{{ url_for('relatorio_excel') }}')">Gerar Excel</button>
+  </div>
+  <div class="cartao">
+    <h3><i class="bi bi-filetype-csv" style="color:var(--verde);"></i> CSV simples</h3>
+    <p>Listagem em formato de texto simples, compatível com qualquer sistema.</p>
+    <button type="button" class="btn btn-outline-secondary btn-sm" onclick="exportar('{{ url_for('relatorio_csv') }}')">Gerar CSV</button>
+  </div>
+</div>
+
+<script>
+  function exportar(baseUrl) {
+    const params = new URLSearchParams(new FormData(document.getElementById('formRelatorio')));
+    window.location.href = baseUrl + '?' + params.toString();
+  }
+</script>
+
+{% endblock %}

@@ -1,0 +1,11 @@
+{% extends "base.html" %}
+{% block titulo %}{{ titulo }}{% endblock %}
+{% block conteudo %}
+<div class="text-center py-5">
+  <div class="display-1 fw-bold text-muted">{{ codigo }}</div>
+  <h1 class="h3 mb-3">{{ titulo }}</h1>
+  <p class="text-muted mx-auto" style="max-width:34rem">{{ mensagem }}</p>
+  <a href="{{ url_for('inicio') }}" class="btn btn-primary me-2">Ir para o início</a>
+  <a href="javascript:history.back()" class="btn btn-outline-secondary">Voltar</a>
+</div>
+{% endblock %}

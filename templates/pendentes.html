@@ -1,0 +1,137 @@
+{% extends "base.html" %}
+{% block titulo %}Pendentes{% endblock %}
+{% block topbar_titulo %}Pendências de aprovação{% endblock %}
+
+{% block conteudo %}
+
+<section class="banner-pagina">
+  <div class="rotulo">Fluxo editorial</div>
+  <h1>Pendências de aprovação</h1>
+  <p>Reveja novos registos e edições submetidas pelos administradores antes de entrarem em vigor.</p>
+</section>
+
+<ul class="nav nav-tabs mb-3">
+  <li class="nav-item">
+    <button class="nav-link active" data-bs-toggle="tab" data-bs-target="#aba-novos" type="button">
+      Novos registos <span class="badge bg-secondary">{{ ongs | length }}</span>
+    </button>
+  </li>
+  <li class="nav-item">
+    <button class="nav-link" data-bs-toggle="tab" data-bs-target="#aba-edicoes" type="button">
+      Edições pendentes <span class="badge bg-secondary">{{ edicoes_pendentes | length }}</span>
+    </button>
+  </li>
+</ul>
+
+<div class="tab-content">
+  <div class="tab-pane fade show active" id="aba-novos">
+    {% for ong in ongs %}
+    <div class="cartao-pendencia" id="ong-{{ ong.id }}">
+      <div class="d-flex justify-content-between align-items-start flex-wrap gap-2">
+        <div>
+          <strong>{{ ong.nome }}</strong>{% if ong.sigla %} <span class="text-muted">({{ ong.sigla }})</span>{% endif %}
+          {% if ong.fase_workflow == 'Em Análise' %}
+          <span class="badge" style="background:var(--dourado); color:#1C1B18;">Em análise{% if ong.em_analise_por %} — {{ ong.em_analise_por }}{% endif %}</span>
+          {% else %}
+          <span class="badge bg-secondary">Submetida</span>
+          {% endif %}
+          <div style="font-size:0.8rem; color:var(--tinta-suave);">
+            {{ ong.natureza or '—' }} · {{ ong.origem or '—' }} · {{ ong.provincia or '—' }} · submetido em {{ ong.criado_em }}
+          </div>
+        </div>
+        <div class="d-flex gap-2">
+          <a href="{{ url_for('detalhe', ong_id=ong.id) }}" class="btn btn-sm btn-outline-secondary">Ver detalhe</a>
+          {% if ong.fase_workflow != 'Em Análise' %}
+          <form method="post" action="{{ url_for('iniciar_analise', ong_id=ong.id) }}" style="display:inline;">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+            <button type="submit" class="btn btn-sm btn-outline-dark">Iniciar análise</button>
+          </form>
+          {% endif %}
+          <form method="post" action="{{ url_for('aprovar', ong_id=ong.id) }}" style="display:inline;">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+            <button type="submit" class="btn btn-sm btn-primary">Aprovar</button>
+          </form>
+          <button type="button" class="btn btn-sm btn-outline-danger" data-bs-toggle="modal" data-bs-target="#rejeitarNovo{{ ong.id }}">Rejeitar</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="modal fade" id="rejeitarNovo{{ ong.id }}" tabindex="-1">
+      <div class="modal-dialog">
+        <form method="post" action="{{ url_for('rejeitar', ong_id=ong.id) }}" class="modal-content">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+          <div class="modal-header"><h5 class="modal-title">Rejeitar "{{ ong.nome }}"</h5></div>
+          <div class="modal-body">
+            <label for="motivo-novo-{{ ong.id }}" class="form-label">Motivo</label>
+            <textarea class="form-control" id="motivo-novo-{{ ong.id }}" name="motivo" rows="3" required></textarea>
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancelar</button>
+            <button type="submit" class="btn btn-danger">Confirmar rejeição</button>
+          </div>
+        </form>
+      </div>
+    </div>
+    {% else %}
+    <p class="text-muted">Não há novos registos pendentes.</p>
+    {% endfor %}
+  </div>
+
+  <div class="tab-pane fade" id="aba-edicoes">
+    {% for item in edicoes_pendentes %}
+    {% set a = item.alteracao %}
+    <div class="cartao-pendencia" id="edicao-{{ a.id }}">
+      <div class="d-flex justify-content-between align-items-start flex-wrap gap-2 mb-2">
+        <div>
+          <strong>{{ a.ong_nome }}</strong>{% if a.ong_sigla %} <span class="text-muted">({{ a.ong_sigla }})</span>{% endif %}
+          <div style="font-size:0.8rem; color:var(--tinta-suave);">Editado por {{ a.solicitado_por }} · {{ a.solicitado_em }}</div>
+        </div>
+        <div class="d-flex gap-2">
+          <a href="{{ url_for('detalhe', ong_id=a.ong_id) }}" class="btn btn-sm btn-outline-secondary">Ver ONG</a>
+          <form method="post" action="{{ url_for('aprovar_edicao', alteracao_id=a.id) }}" style="display:inline;">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+            <button type="submit" class="btn btn-sm btn-primary">Aprovar alteração</button>
+          </form>
+          <button type="button" class="btn btn-sm btn-outline-danger" data-bs-toggle="modal" data-bs-target="#rejeitarEdicao{{ a.id }}">Rejeitar</button>
+        </div>
+      </div>
+
+      {% if item.diffs %}
+      <table class="diff-tabela">
+        <thead><tr><th>Campo</th><th>Antes</th><th>Depois</th></tr></thead>
+        <tbody>
+          {% for d in item.diffs %}
+          <tr>
+            <td>{{ d.rotulo }}</td>
+            <td class="diff-antigo">{{ d.antigo }}</td>
+            <td class="diff-novo">{{ d.novo }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+      {% endif %}
+    </div>
+
+    <div class="modal fade" id="rejeitarEdicao{{ a.id }}" tabindex="-1">
+      <div class="modal-dialog">
+        <form method="post" action="{{ url_for('rejeitar_edicao', alteracao_id=a.id) }}" class="modal-content">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+          <div class="modal-header"><h5 class="modal-title">Rejeitar alteração de "{{ a.ong_nome }}"</h5></div>
+          <div class="modal-body">
+            <label for="motivo-edicao-{{ a.id }}" class="form-label">Motivo</label>
+            <textarea class="form-control" id="motivo-edicao-{{ a.id }}" name="motivo" rows="3" required></textarea>
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancelar</button>
+            <button type="submit" class="btn btn-danger">Confirmar rejeição</button>
+          </div>
+        </form>
+      </div>
+    </div>
+    {% else %}
+    <p class="text-muted">Não há edições pendentes.</p>
+    {% endfor %}
+  </div>
+</div>
+
+{% endblock %}

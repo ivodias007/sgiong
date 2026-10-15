@@ -1,0 +1,136 @@
+{% extends "base.html" %}
+{% block titulo %}Início{% endblock %}
+{% block topbar_titulo %}Início{% endblock %}
+
+{% block conteudo %}
+
+<section class="hero-noticia hero-institucional" {% if capa_url %}style="background-image:url('{{ capa_url }}')"{% endif %}>
+  {% if pode_gerir_noticias %}
+  <a class="btn btn-sm btn-light hero-admin" href="{{ url_for('noticias_admin') }}"><i class="bi bi-gear"></i> Gerir notícias e capa</a>
+  {% endif %}
+  <div class="hero-noticia-corpo">
+    <div class="hero-instituicao">Ministério da Planificação e Desenvolvimento</div>
+    <div class="hero-instituicao hero-instituicao--2">Direcção Nacional de Promoção do Desenvolvimento Integrado</div>
+    <span class="hero-tag">Moçambique</span>
+    <h1>Organizações Não Governamentais em Moçambique</h1>
+    <div class="hero-meta" id="dataHoje">{{ hoje }}</div>
+  </div>
+</section>
+<script>
+  // Data do dia em que a pessoa entra no sistema (relógio do dispositivo).
+  (function () {
+    var m = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
+    var d = new Date();
+    document.getElementById('dataHoje').textContent = d.getDate() + ' de ' + m[d.getMonth()] + ' de ' + d.getFullYear();
+  })();
+</script>
+
+{% if ultimas %}
+<div class="d-flex justify-content-between align-items-center mb-2">
+  <h3 class="mb-0">Últimas notícias</h3>
+  <a href="{{ url_for('noticias_lista') }}" class="explorar">Ver todas →</a>
+</div>
+<div class="row g-3 mb-4">
+  {% for n in ultimas %}
+  <div class="col-md-4">
+    <a class="noticia-cartao" href="{{ url_for('noticia_detalhe', noticia_id=n.id) }}">
+      <div class="noticia-capa" {% if n.imagem_url %}style="background-image:url('{{ n.imagem_url }}')"{% endif %}><span class="hero-tag">{{ n.categoria }}</span></div>
+      <div class="noticia-corpo"><h4>{{ n.titulo }}</h4><div class="noticia-meta">{{ n.autor or '' }}{% if n.autor %} · {% endif %}{{ n.publicado_em | data_extenso }}</div></div>
+    </a>
+  </div>
+  {% endfor %}
+</div>
+{% endif %}
+
+<div class="faixa-estatisticas">
+  <div class="estatistica">
+    <i class="bi bi-building-check icone"></i>
+    <span class="numero">{{ total_ongs }}</span>
+    <span class="rotulo">ONGs aprovadas</span>
+  </div>
+  <div class="estatistica">
+    <i class="bi bi-geo-alt icone"></i>
+    <span class="numero">{{ total_provincias }}</span>
+    <span class="rotulo">Províncias com registo</span>
+  </div>
+  <div class="estatistica">
+    <i class="bi bi-map icone"></i>
+    <span class="numero">{{ total_distritos }}</span>
+    <span class="rotulo">Distritos cobertos</span>
+  </div>
+  <div class="estatistica">
+    <i class="bi bi-tags icone"></i>
+    <span class="numero">{{ total_areas }}</span>
+    <span class="rotulo">Áreas temáticas activas</span>
+  </div>
+</div>
+
+<div class="row g-3 mb-4">
+  <div class="col-md-7">
+    <div class="cartao h-100">
+      <h3><i class="bi bi-map"></i> ONGs por província</h3>
+      {% for p in por_provincia %}
+      <div class="d-flex align-items-center gap-2 mb-2">
+        <span style="width:150px; font-size:0.88rem;">{{ p.provincia }}</span>
+        <div class="flex-grow-1" style="background:var(--cinza-linha); border-radius:999px; height:8px; overflow:hidden;">
+          <div style="background:var(--terracota); height:100%; width:{{ (p.c / por_provincia[0].c * 100) if por_provincia[0].c else 0 }}%;"></div>
+        </div>
+        <span style="width:36px; text-align:right; font-size:0.85rem; color:var(--tinta-suave);">{{ p.c }}</span>
+      </div>
+      {% else %}
+      <p>Ainda não há organizações registadas.</p>
+      {% endfor %}
+      <a href="{{ url_for('dashboard') }}" class="explorar"><i class="bi bi-bar-chart-line"></i> Ver painel completo →</a>
+    </div>
+  </div>
+
+  <div class="col-md-5">
+    <div class="cartao h-100">
+      <h3><i class="bi bi-clock-history"></i> Registadas recentemente</h3>
+      {% for ong in recentes %}
+      <div class="d-flex align-items-center gap-2 mb-2">
+        {% if ong.logo_url %}
+        <img src="{{ ong.logo_url }}" alt="" style="height:38px; width:38px; object-fit:contain; border-radius:50%; border:1px solid var(--cinza-linha); background:#fff;">
+        {% else %}
+        <span class="emblema-ong" style="background:{{ ong.nome | cor_avatar }};">{{ ong.nome | iniciais }}</span>
+        {% endif %}
+        <div>
+          <a href="{{ url_for('detalhe', ong_id=ong.id) }}" style="font-size:0.9rem;">{{ ong.nome }}</a>
+          <div style="font-size:0.78rem; color:var(--tinta-suave);">{{ ong.provincia or '—' }}</div>
+        </div>
+      </div>
+      {% else %}
+      <p>Ainda não há organizações registadas.</p>
+      {% endfor %}
+    </div>
+  </div>
+</div>
+
+<div class="grelha-cartoes">
+  <div class="cartao">
+    <h3><i class="bi bi-list-ul"></i> Listagem completa</h3>
+    <p>Consultar, filtrar e exportar todas as ONGs registadas.</p>
+    <a class="explorar" href="{{ url_for('index') }}">Ver listagem →</a>
+  </div>
+  {% if session.get('nivel') %}
+  <div class="cartao">
+    <h3><i class="bi bi-plus-circle"></i> Registar nova ONG</h3>
+    <p>Adicionar uma nova organização ao sistema.</p>
+    <a class="explorar" href="{{ url_for('novo') }}">Registar →</a>
+  </div>
+  {% endif %}
+  {% if session.get('nivel') == 'superadmin' %}
+  <div class="cartao">
+    <h3><i class="bi bi-hourglass-split"></i> Pendências de aprovação</h3>
+    <p>{{ total_pendentes or 0 }} registo(s)/edição(ões) à espera de revisão.</p>
+    <a class="explorar" href="{{ url_for('pendentes') }}">Rever →</a>
+  </div>
+  {% endif %}
+  <div class="cartao">
+    <h3><i class="bi bi-file-earmark-bar-graph"></i> Levantamento MPD</h3>
+    <p>Contexto nacional do levantamento de ONGs feito pelo Ministério.</p>
+    <a class="explorar" href="{{ url_for('levantamento_nacional') }}">Consultar →</a>
+  </div>
+</div>
+
+{% endblock %}

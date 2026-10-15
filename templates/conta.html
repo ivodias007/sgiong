@@ -1,0 +1,90 @@
+{% extends "base.html" %}
+{% block titulo %}A minha conta{% endblock %}
+{% block topbar_titulo %}A minha conta{% endblock %}
+
+{% block conteudo %}
+
+<section class="banner-pagina">
+  <div class="rotulo">Segurança da conta</div>
+  <h1>{{ session.get('utilizador') }}</h1>
+  <p>{{ rotulo_perfil_sessao }}{% if session.get('provincia') %} · {{ session.get('provincia') }}{% endif %}</p>
+</section>
+
+{% if not utilizador_db %}
+<div class="alert alert-warning">
+  <i class="bi bi-info-circle"></i>
+  Esta é uma conta de arranque (definida por variável de ambiente), não uma conta individual.
+  Não é possível mudar a senha nem activar o 2FA por aqui — peça a um Super Administrador para
+  lhe criar uma conta própria em <a href="{{ url_for('utilizadores') }}">Utilizadores</a>.
+</div>
+{% else %}
+
+<div class="row g-3">
+  <div class="col-md-6">
+    <div class="cartao h-100">
+      <h3><i class="bi bi-key"></i> Alterar senha</h3>
+      <form method="post" action="{{ url_for('alterar_propria_senha') }}">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+        <div class="campo-formulario mb-2">
+          <label for="senha_actual">Senha actual</label>
+          <input type="password" class="form-control" id="senha_actual" name="senha_actual" required>
+        </div>
+        <div class="campo-formulario mb-2">
+          <label for="nova_senha">Nova senha</label>
+          <input type="password" class="form-control" id="nova_senha" name="nova_senha" required minlength="8">
+          <div class="form-text">Mínimo 8 caracteres, com pelo menos uma letra e um número.</div>
+        </div>
+        <div class="campo-formulario mb-3">
+          <label for="confirmar_senha">Confirmar nova senha</label>
+          <input type="password" class="form-control" id="confirmar_senha" name="confirmar_senha" required minlength="8">
+        </div>
+        <button type="submit" class="btn btn-primary">Alterar senha</button>
+      </form>
+    </div>
+  </div>
+
+  <div class="col-md-6">
+    <div class="cartao h-100">
+      <h3><i class="bi bi-shield-lock"></i> Verificação em duas etapas (2FA)</h3>
+      {% if utilizador_db.totp_ativo %}
+      <p><span class="selo-estado selo-estado--aprovado">Activo</span></p>
+      <p style="font-size:0.88rem; color:var(--tinta-suave);">
+        A sua conta pede um código do telemóvel a cada login, além da senha.
+      </p>
+      <p style="font-size:0.85rem;">Códigos de recuperação por usar: <strong>{{ codigos_restantes }}</strong>
+        {% if codigos_restantes < 3 %}<span class="text-danger">— gere novos.</span>{% endif %}</p>
+      <form method="post" action="{{ url_for('regenerar_codigos_2fa') }}" class="mb-3">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+        <div class="campo-formulario mb-2">
+          <label for="senha_codigos">Senha actual (para gerar novos códigos de recuperação)</label>
+          <input type="password" class="form-control" id="senha_codigos" name="senha_actual" required autocomplete="current-password">
+        </div>
+        <button type="submit" class="btn btn-outline-secondary btn-sm">Gerar novos códigos</button>
+      </form>
+      {% if tfa_obrigatorio %}
+      <p style="font-size:0.82rem; color:var(--tinta-suave);"><i class="bi bi-lock"></i> O 2FA é obrigatório para o seu perfil.</p>
+      {% else %}
+      <form method="post" action="{{ url_for('desactivar_2fa') }}"
+            onsubmit="return confirm('Desactivar o 2FA torna a conta menos segura. Continuar?');">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+        <div class="campo-formulario mb-2">
+          <label for="senha_actual_2fa">Confirme a sua senha para desactivar</label>
+          <input type="password" class="form-control" id="senha_actual_2fa" name="senha_actual" required>
+        </div>
+        <button type="submit" class="btn btn-outline-danger btn-sm">Desactivar 2FA</button>
+      </form>
+      {% endif %}
+      {% else %}
+      <p><span class="selo-estado selo-estado--pendente">Inactivo</span></p>
+      <p style="font-size:0.88rem; color:var(--tinta-suave);">
+        Recomendado para todas as contas com permissão de aprovar ou gerir utilizadores.
+      </p>
+      <a href="{{ url_for('configurar_2fa') }}" class="btn btn-primary btn-sm">Activar 2FA</a>
+      {% endif %}
+    </div>
+  </div>
+</div>
+
+{% endif %}
+
+{% endblock %}

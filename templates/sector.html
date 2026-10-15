@@ -1,0 +1,95 @@
+{% extends 'base.html' %}
+{% block titulo %}{{ nome_area }} - SGIONGs{% endblock %}
+
+{% block conteudo %}
+<div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
+    <div>
+        <a href="{{ url_for('dashboard') }}" class="btn btn-sm btn-outline-secondary mb-1">
+            <i class="bi bi-arrow-left"></i> Dashboard
+        </a>
+        <h4 class="mb-0 mt-1">
+            <i class="bi {{ nome_area | icone_area }}"></i> {{ nome_area }}
+            <span class="badge bg-dark ms-2">{{ total_geral }} ONGs</span>
+        </h4>
+    </div>
+    <form method="get" class="d-flex gap-2">
+        <select name="provincia" class="form-select form-select-sm" onchange="this.form.submit()">
+            <option value="">Todas as províncias</option>
+            {% for p in provincias %}
+            <option value="{{ p }}" {% if provincia_filtro == p %}selected{% endif %}>{{ p }}</option>
+            {% endfor %}
+        </select>
+        {% if provincia_filtro %}
+        <a href="{{ request.path }}" class="btn btn-sm btn-outline-secondary">Limpar</a>
+        {% endif %}
+    </form>
+</div>
+
+{% for item in dados_sector %}
+<div class="card shadow-sm mb-3">
+    <div class="card-header d-flex justify-content-between align-items-center"
+         style="background:#00622D; color:#fff; cursor:pointer;"
+         data-bs-toggle="collapse"
+         data-bs-target="#ram-{{ loop.index }}"
+         aria-expanded="{{ 'true' if item.total > 0 else 'false' }}">
+        <span class="fw-semibold"><i class="bi bi-diagram-2 me-2"></i>{{ item.ramificacao }}</span>
+        <span class="badge {% if item.total > 0 %}bg-light text-dark{% else %}bg-secondary{% endif %}">
+            {{ item.total }} ONG{{ 's' if item.total != 1 else '' }}
+        </span>
+    </div>
+    <div class="collapse {% if item.total > 0 %}show{% endif %}" id="ram-{{ loop.index }}">
+        {% if item.ongs %}
+        <div class="table-responsive">
+            <table class="table table-sm table-hover mb-0">
+                <thead class="table-light">
+                    <tr>
+                        <th>Organização</th>
+                        <th>Natureza</th>
+                        <th>Origem</th>
+                        <th>Província</th>
+                        <th>Distritos</th>
+                        <th></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for ong in item.ongs %}
+                    <tr>
+                        <td class="fw-semibold">{{ ong.nome }}</td>
+                        <td>
+                            {% if ong.natureza %}
+                            <span class="badge bg-info text-dark">{{ ong.natureza }}</span>
+                            {% else %}<span class="text-muted">—</span>{% endif %}
+                        </td>
+                        <td>
+                            {% if ong.origem %}
+                            <span class="badge bg-secondary">{{ ong.origem }}</span>
+                            {% else %}<span class="text-muted">—</span>{% endif %}
+                        </td>
+                        <td>
+                            {% if ong.provincia %}
+                            <span class="badge bg-dark">{{ ong.provincia }}</span>
+                            {% else %}<span class="text-muted">—</span>{% endif %}
+                        </td>
+                        <td class="small text-muted">{{ ong.distritos_texto or '—' }}</td>
+                        <td>
+                            <a href="{{ url_for('detalhe', ong_id=ong.id) }}"
+                               class="btn btn-xs btn-outline-primary btn-sm py-0 px-2">
+                                <i class="bi bi-eye"></i>
+                            </a>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <div class="px-4 py-3 text-muted small">
+            <i class="bi bi-info-circle"></i>
+            Nenhuma organização registada nesta ramificação
+            {% if provincia_filtro %}para a província de <strong>{{ provincia_filtro }}</strong>{% endif %}.
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endfor %}
+{% endblock %}

@@ -1,0 +1,464 @@
+{% extends "base.html" %}
+{% block titulo %}Painel de Indicadores{% endblock %}
+{% block topbar_titulo %}Painel de Indicadores{% endblock %}
+
+{% block cabecalho_extra %}
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js"></script>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+{% endblock %}
+
+{% block conteudo %}
+
+<section class="banner-pagina">
+  <div class="rotulo">Painel Nacional de ONGs{% if nome_distrito_filtro %} · {{ nome_distrito_filtro }}{% elif provincia_filtro %} · {{ provincia_filtro }}{% endif %}</div>
+  <h1>Indicadores da sociedade civil</h1>
+  <p>Distribuição geográfica, natureza, origem e áreas de intervenção das ONGs registadas.</p>
+</section>
+
+<form method="get" action="{{ url_for('dashboard') }}" class="barra-filtros">
+  {% if session.get('provincia') %}
+  <div class="campo-formulario" style="flex:1 1 200px;">
+    <label>Província</label>
+    <div class="form-control form-control-sm bg-light">{{ session.get('provincia') }} <i class="bi bi-lock-fill text-muted"></i></div>
+  </div>
+  {% else %}
+  <div class="campo-formulario" style="flex:1 1 200px;">
+    <label for="provincia">Província</label>
+    <select class="form-select form-select-sm" id="provincia" name="provincia" onchange="this.form.distrito_id.value=''; this.form.submit();">
+      <option value="">Todas as províncias</option>
+      {% for p in provincias %}
+      <option value="{{ p }}" {{ 'selected' if provincia_filtro == p }}>{{ p }}</option>
+      {% endfor %}
+    </select>
+  </div>
+  {% endif %}
+  <div class="campo-formulario" style="flex:1 1 200px;">
+    <label for="distrito_id">Distrito</label>
+    <select class="form-select form-select-sm" id="distrito_id" name="distrito_id" onchange="this.form.submit();">
+      <option value="">Todos os distritos</option>
+      {% for d in distritos_filtro %}
+      <option value="{{ d.id }}" {{ 'selected' if distrito_id_filtro == d.id | string }}>{{ d.nome }}</option>
+      {% endfor %}
+    </select>
+  </div>
+  {% if provincia_filtro or distrito_id_filtro %}
+  <a href="{{ url_for('dashboard') }}" class="btn btn-outline-secondary btn-sm">Limpar filtros</a>
+  {% endif %}
+</form>
+
+<div class="faixa-estatisticas">
+  <div class="estatistica">
+    <i class="bi bi-collection icone"></i>
+    <span class="numero">{{ total_registadas }}</span>
+    <span class="rotulo">ONGs registadas</span>
+  </div>
+  <div class="estatistica">
+    <i class="bi bi-patch-check icone"></i>
+    <span class="numero">{{ total_ongs }}</span>
+    <span class="rotulo">Aprovadas</span>
+  </div>
+  <div class="estatistica">
+    <i class="bi bi-hourglass-split icone"></i>
+    <span class="numero">{{ total_pendentes_geral }}</span>
+    <span class="rotulo">Pendentes</span>
+  </div>
+  <div class="estatistica">
+    <i class="bi bi-x-circle icone"></i>
+    <span class="numero">{{ total_rejeitadas_geral }}</span>
+    <span class="rotulo">Rejeitadas</span>
+  </div>
+  <div class="estatistica">
+    <i class="bi bi-flag icone"></i>
+    <span class="numero">{{ origem_valores[origem_labels.index('Nacional')] if 'Nacional' in origem_labels else 0 }}</span>
+    <span class="rotulo">Nacionais</span>
+  </div>
+  <div class="estatistica">
+    <i class="bi bi-globe icone"></i>
+    <span class="numero">{{ origem_valores[origem_labels.index('Estrangeira')] if 'Estrangeira' in origem_labels else 0 }}</span>
+    <span class="rotulo">Estrangeiras</span>
+  </div>
+</div>
+
+<div class="row g-3 mb-4">
+  <div class="col-md-6">
+    <div class="cartao h-100 text-center">
+      <h3><i class="bi bi-geo-alt"></i> Cobertura provincial</h3>
+      <div style="font-family:var(--fonte-titulo); font-size:2rem; color:var(--verde-escuro);">{{ cobertura_provincias }}%</div>
+      <p style="margin:0;">{{ total_provincias }} de {{ provincias | length }} províncias com pelo menos uma ONG aprovada</p>
+    </div>
+  </div>
+  <div class="col-md-6">
+    <div class="cartao h-100 text-center">
+      <h3><i class="bi bi-map"></i> Cobertura distrital{% if provincia_filtro %} — {{ provincia_filtro }}{% endif %}</h3>
+      <div style="font-family:var(--fonte-titulo); font-size:2rem; color:var(--verde-escuro);">{{ cobertura_distritos }}%</div>
+      <p style="margin:0;">{{ total_distritos }} de {{ total_distritos_oficiais }} distritos{% if provincia_filtro %} da província{% else %} do país{% endif %} com presença de ONGs</p>
+    </div>
+  </div>
+</div>
+
+<div class="row g-3 mb-4">
+  <div class="col-lg-8">
+    <div class="cartao h-100">
+      <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-2">
+        <h3 class="mb-0"><i class="bi bi-map"></i> Mapa georreferenciado <span id="tituloMapa" style="font-weight:400; font-size:0.9rem; color:var(--tinta-suave);">· províncias</span></h3>
+        <div class="btn-group btn-group-sm" role="group" aria-label="Nível do mapa">
+          <button type="button" class="btn btn-outline-secondary active" id="btnNivelProv">Províncias</button>
+          <button type="button" class="btn btn-outline-secondary" id="btnNivelDist">Distritos</button>
+          <button type="button" class="btn btn-outline-secondary" id="btnVoltarPais" style="display:none;"><i class="bi bi-arrow-left"></i> País</button>
+        </div>
+      </div>
+      <div id="mapaProvincias" style="height:560px; border-radius:4px; overflow:hidden;"></div>
+      <p id="fonteMapa" style="font-size:0.72rem; color:var(--tinta-suave); margin:0.4rem 0 0;">
+        Fronteiras: geoBoundaries.org (CC BY 4.0), 159 distritos/cidades. Clique numa província para ver os seus distritos; clique num distrito para filtrar o painel. Em Maputo Cidade os 7 distritos urbanos aparecem como uma só área.
+      </p>
+    </div>
+  </div>
+  <div class="col-lg-4">
+    <div class="cartao h-100">
+      <h3 id="tituloTabelaMapa">Percentagem por província</h3>
+      <div style="max-height:520px; overflow-y:auto;">
+        <table class="tabela-dados" style="font-size:0.82rem;">
+          <thead><tr><th id="thNome">Província</th><th class="text-end">ONGs</th><th class="text-end" id="thPct">% do total nacional</th></tr></thead>
+          <tbody id="corpoTabelaMapa"></tbody>
+        </table>
+      </div>
+      <p id="notaPct" style="font-size:0.72rem; color:var(--tinta-suave); margin:0.5rem 0 0;"></p>
+    </div>
+  </div>
+</div>
+
+<div class="row g-3 mb-4">
+  <div class="col-md-6">
+    <div class="cartao h-100">
+      <h3>Por província</h3>
+      <canvas id="graficoProvincias" height="220"></canvas>
+    </div>
+  </div>
+</div>
+
+<div class="row g-3 mb-4">
+  <div class="col-md-6">
+    <div class="cartao h-100">
+      <h3>Por natureza</h3>
+      <canvas id="graficoNatureza" height="220"></canvas>
+      <div class="d-flex flex-wrap gap-3 justify-content-center mt-2" style="font-size:0.85rem;">
+        {% for i in range(natureza_labels | length) %}
+        <span><strong>{{ natureza_valores[i] }}</strong> {{ natureza_labels[i] }}</span>
+        {% endfor %}
+      </div>
+      <p style="font-size:0.75rem; color:var(--tinta-suave); margin-top:0.5rem;">Uma ONG pode ter mais do que uma natureza — a soma pode ultrapassar o total. "Não especificado" conta as ONGs cuja matriz de origem não preencheu este campo.</p>
+    </div>
+  </div>
+  <div class="col-md-6">
+    <div class="cartao h-100">
+      <h3>Por origem</h3>
+      <canvas id="graficoOrigem" height="220"></canvas>
+    </div>
+  </div>
+</div>
+
+<div class="row g-3 mb-4">
+  <div class="col-md-7">
+    <div class="cartao h-100">
+      <h3><i class="bi bi-graph-up"></i> Evolução anual de registos</h3>
+      {% if ano_labels | length > 1 %}
+      <canvas id="graficoEvolucao" height="200"></canvas>
+      {% else %}
+      <p style="color:var(--tinta-suave);">Ainda não há dados suficientes de mais do que um ano para traçar a evolução.</p>
+      {% endif %}
+    </div>
+  </div>
+  <div class="col-md-5">
+    <div class="cartao h-100">
+      <h3><i class="bi bi-signpost-split"></i> ONGs por distrito (top 15)</h3>
+      {% if distrito_labels %}
+      <canvas id="graficoDistritos" height="260"></canvas>
+      {% else %}
+      <p style="color:var(--tinta-suave);">Sem distritos identificados para esta selecção.</p>
+      {% endif %}
+    </div>
+  </div>
+</div>
+
+<div class="cartao mb-4">
+  <h3><i class="bi bi-table"></i> ONGs por distrito, com repartição por natureza</h3>
+  {% if distrito_natureza %}
+  <p style="font-size:0.8rem; color:var(--tinta-suave);">
+    Uma ONG com mais do que uma natureza (ex.: "ONG, Fundação") conta em cada uma — a soma das colunas pode
+    ultrapassar o total do distrito. "Comunidade" não é um nível que o sistema registe estruturadamente —
+    só distrito e província; se precisar desse detalhe, teria de vir marcado no texto de origem das matrizes.
+  </p>
+  <table class="tabela-dados">
+    <thead>
+      <tr><th>Distrito</th><th>ONG</th><th>OSC</th><th>Fundação</th><th>Total de ONGs no distrito</th></tr>
+    </thead>
+    <tbody>
+      {% for d in distrito_natureza %}
+      <tr>
+        <td>{{ d.distrito }}</td>
+        <td>{{ d.total_ong }}</td>
+        <td>{{ d.total_osc }}</td>
+        <td>{{ d.total_fundacao }}</td>
+        <td><strong>{{ d.total_geral }}</strong></td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  {% else %}
+  <p style="color:var(--tinta-suave);">Sem distritos identificados para esta selecção.</p>
+  {% endif %}
+</div>
+
+<div class="cartao mb-4">
+  <h3>Áreas temáticas</h3>
+  <div class="grelha-cartoes">
+    {% for area, valor in total_ongs_por_area.items() %}
+    <a href="{{ url_for('sector', nome_area=area) }}{% if provincia_filtro %}?provincia={{ provincia_filtro }}{% endif %}"
+       class="cartao" style="text-decoration:none; color:inherit;">
+      <div style="font-size:1.5rem; color:var(--terracota);"><i class="bi {{ area | icone_area }}"></i></div>
+      <h3 style="margin-top:0.4rem;">{{ area }}</h3>
+      <p style="margin:0; font-family:var(--fonte-titulo); font-size:1.3rem; color:var(--verde-escuro);">{{ valor }}</p>
+    </a>
+    {% endfor %}
+  </div>
+</div>
+
+<div class="cartao">
+  <h3>Por estado</h3>
+  <table class="tabela-dados">
+    <thead><tr><th>Estado</th><th>Total</th></tr></thead>
+    <tbody>
+      {% for i in range(estado_labels | length) %}
+      <tr><td>{{ estado_labels[i] or '—' }}</td><td>{{ estado_valores[i] }}</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+
+<script>
+  new Chart(document.getElementById('graficoProvincias'), {
+    type: 'bar',
+    data: {
+      labels: {{ provincia_labels | tojson }},
+      datasets: [{ data: {{ provincia_valores | tojson }}, backgroundColor: '#B5451B' }]
+    },
+    options: { responsive: true, plugins: { legend: { display: false } }, indexAxis: 'y' }
+  });
+
+  new Chart(document.getElementById('graficoNatureza'), {
+    type: 'doughnut',
+    data: {
+      labels: {{ natureza_labels | tojson }},
+      datasets: [{ data: {{ natureza_valores | tojson }}, backgroundColor: ['#0B4228','#3E7A5C','#B08A3E','#8F3714'] }]
+    },
+    options: { responsive: true, plugins: { legend: { position: 'bottom', labels: { boxWidth: 10, font: { size: 10 } } } } }
+  });
+
+  new Chart(document.getElementById('graficoOrigem'), {
+    type: 'doughnut',
+    data: {
+      labels: {{ origem_labels | tojson }},
+      datasets: [{ data: {{ origem_valores | tojson }}, backgroundColor: ['#0B4228','#B5451B','#B08A3E'] }]
+    },
+    options: { responsive: true, plugins: { legend: { position: 'bottom', labels: { boxWidth: 10, font: { size: 10 } } } } }
+  });
+
+  {% if ano_labels | length > 1 %}
+  new Chart(document.getElementById('graficoEvolucao'), {
+    type: 'line',
+    data: {
+      labels: {{ ano_labels | tojson }},
+      datasets: [{
+        label: 'ONGs registadas',
+        data: {{ ano_valores | tojson }},
+        borderColor: '#0B4228',
+        backgroundColor: 'rgba(11,66,40,0.12)',
+        tension: 0.25, fill: true, pointRadius: 3,
+      }]
+    },
+    options: { responsive: true, plugins: { legend: { display: false } },
+               scales: { y: { beginAtZero: true, ticks: { precision: 0 } } } }
+  });
+  {% endif %}
+
+  {% if distrito_labels %}
+  new Chart(document.getElementById('graficoDistritos'), {
+    type: 'bar',
+    data: {
+      labels: {{ distrito_labels | tojson }},
+      datasets: [{ data: {{ distrito_valores | tojson }}, backgroundColor: '#B08A3E' }]
+    },
+    options: { responsive: true, indexAxis: 'y', plugins: { legend: { display: false } },
+               scales: { x: { ticks: { precision: 0 } } } }
+  });
+  {% endif %}
+
+  // ------------------------------------------------------------------
+  // Mapa georreferenciado — províncias e distritos (geoBoundaries).
+  // Clique numa província: faz zoom e mostra os seus distritos.
+  // ------------------------------------------------------------------
+  const dadosProv = {{ mapa_dados | tojson }};
+  const dadosDist = {{ mapa_distritos | tojson }};
+  const totalNacional = {{ total_nacional }};
+  const urlDashboard = "{{ url_for('dashboard') }}";
+  const fmtPct = v => v.toLocaleString('pt-PT', { minimumFractionDigits: 1, maximumFractionDigits: 1 }) + '%';
+  const chave = s => s.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/^cidade (da|de|do) /, '').replace(/[^a-z0-9]/g, '');
+
+  const provPorChave = {};
+  dadosProv.forEach(p => { provPorChave[chave(p.nome)] = p; });
+  const totalPorProv = {};
+  dadosProv.forEach(p => { totalPorProv[p.nome] = p.total; });
+  const distPorChave = {};
+  dadosDist.forEach(d => { distPorChave[chave(d.nome)] = d; });
+  // nomes diferentes entre o ficheiro geográfico e a lista oficial
+  const ALIAS = { mandlakaze: 'mandlakazi', vilankulo: 'vilanculos', zumbu: 'zumbo', nacala: 'nacalaporto' };
+
+  function dadosDistritoFeature(f) {
+    const p = f.properties;
+    if (p.tipo === 'cidade_maputo') {
+      const pv = provPorChave[chave('Maputo Cidade')];
+      return { total: pv ? pv.total : 0, id: null, provincia: 'Maputo Cidade', nome: 'Cidade de Maputo' };
+    }
+    const k = ALIAS[p.chave] || p.chave;
+    const d = distPorChave[k];
+    return { total: d ? d.total : 0, id: d ? d.id : null, provincia: p.provincia, nome: p.nome };
+  }
+
+  function cor(total, maximo) {
+    if (!maximo || !total) return '#EDEAE2';
+    const i = Math.min(total / maximo, 1);
+    return `rgb(${Math.round(251 - i * 70)}, ${Math.round(249 - i * 180)}, ${Math.round(245 - i * 218)})`;
+  }
+
+  const mapa = L.map('mapaProvincias', { zoomControl: true, scrollWheelZoom: false, minZoom: 4 });
+  const limitesPais = L.latLngBounds([[-27, 30], [-10, 41]]);
+  mapa.fitBounds(limitesPais);
+
+  let camadaProv = null, camadaDist = null, legenda = null;
+  let nivel = 'prov', provActual = null;
+
+  function preencherTabela(titulo, colNome, colPct, linhas, nota) {
+    document.getElementById('tituloTabelaMapa').textContent = titulo;
+    document.getElementById('thNome').textContent = colNome;
+    document.getElementById('thPct').textContent = colPct;
+    document.getElementById('corpoTabelaMapa').innerHTML = linhas.map(l =>
+      `<tr><td>${l.nome}</td><td class="text-end">${l.total}</td><td class="text-end">${fmtPct(l.pct)}</td></tr>`).join('');
+    document.getElementById('notaPct').textContent = nota;
+  }
+
+  function tabelaProvincias() {
+    preencherTabela('Percentagem por província', 'Província', '% do total nacional',
+      dadosProv.map(p => ({ nome: p.nome, total: p.total, pct: p.pct })),
+      `Percentagens sobre os ${totalNacional} registos aprovados. Uma ONG que actua em várias províncias conta em cada uma, por isso a soma pode passar de 100%.`);
+  }
+
+  function tabelaDistritos(prov) {
+    const tp = totalPorProv[prov] || 0;
+    const linhas = dadosDist.filter(d => d.provincia === prov).sort((a, b) => b.total - a.total)
+      .map(d => ({ nome: d.nome, total: d.total, pct: tp ? d.total / tp * 100 : 0 }));
+    preencherTabela('Distritos — ' + prov, 'Distrito', '% das ONGs da província', linhas,
+      `Percentagem sobre as ${tp} ONGs registadas em ${prov}. Uma ONG pode actuar em vários distritos.`);
+  }
+
+  function mostrarLegenda(maximo, rotulo) {
+    if (legenda) mapa.removeControl(legenda);
+    legenda = L.control({ position: 'bottomright' });
+    legenda.onAdd = () => {
+      const div = L.DomUtil.create('div');
+      div.style.cssText = 'background:#fff;padding:6px 8px;border-radius:4px;font-size:11px;box-shadow:0 1px 4px rgba(0,0,0,.3)';
+      div.innerHTML = `<div style="margin-bottom:3px">${rotulo}</div>` +
+        `<div style="height:8px;width:130px;background:linear-gradient(90deg,${cor(0,1)},${cor(maximo,maximo)})"></div>` +
+        `<div style="display:flex;justify-content:space-between"><span>0</span><span>${maximo}</span></div>`;
+      return div;
+    };
+    legenda.addTo(mapa);
+  }
+
+  function limparCamadas() {
+    if (camadaProv) { mapa.removeLayer(camadaProv); camadaProv = null; }
+    if (camadaDist) { mapa.removeLayer(camadaDist); camadaDist = null; }
+  }
+
+  function atualizarBotoes() {
+    document.getElementById('btnNivelProv').classList.toggle('active', nivel === 'prov' && !provActual);
+    document.getElementById('btnNivelDist').classList.toggle('active', nivel === 'dist' && !provActual);
+    document.getElementById('btnVoltarPais').style.display = provActual ? '' : 'none';
+    document.getElementById('tituloMapa').textContent = '· ' + (provActual ? provActual + ' (distritos)' : (nivel === 'prov' ? 'províncias' : 'distritos de todo o país'));
+  }
+
+  let geoProv = null, geoDist = null;
+
+  function desenharProvincias() {
+    nivel = 'prov'; provActual = null; limparCamadas();
+    const maximo = Math.max(0, ...dadosProv.map(p => p.total));
+    camadaProv = L.geoJSON(geoProv, {
+      style: f => {
+        const d = provPorChave[chave(f.properties.nome)];
+        return { fillColor: cor(d ? d.total : 0, maximo), fillOpacity: 0.88, color: '#0B4228', weight: 1.2 };
+      },
+      onEachFeature: (f, layer) => {
+        const d = provPorChave[chave(f.properties.nome)];
+        layer.bindTooltip(`<strong>${f.properties.nome}</strong><br>${d ? d.total : 0} ONGs · ${fmtPct(d ? d.pct : 0)} do total nacional<br><em>Clique para ver os distritos</em>`, { sticky: true });
+        layer.on('mouseover', () => layer.setStyle({ weight: 2.5 }));
+        layer.on('mouseout', () => camadaProv.resetStyle(layer));
+        layer.on('click', () => desenharDistritos(f.properties.nome, layer.getBounds()));
+      }
+    }).addTo(mapa);
+    mapa.fitBounds(limitesPais);
+    mostrarLegenda(maximo, 'ONGs por província');
+    tabelaProvincias();
+    atualizarBotoes();
+  }
+
+  function desenharDistritos(prov, limites) {
+    nivel = 'dist'; provActual = prov || null; limparCamadas();
+    const feats = geoDist.features.filter(f => !prov || f.properties.provincia === prov || (!f.properties.provincia && !prov));
+    const maximo = Math.max(0, ...feats.map(f => dadosDistritoFeature(f).total));
+    camadaDist = L.geoJSON({ type: 'FeatureCollection', features: feats }, {
+      style: f => {
+        if (f.properties.tipo === 'agua') return { fillColor: '#cfe3ee', fillOpacity: 0.6, color: '#9bbccc', weight: 0.6, interactive: false };
+        return { fillColor: cor(dadosDistritoFeature(f).total, maximo), fillOpacity: 0.88, color: '#0B4228', weight: prov ? 1 : 0.5 };
+      },
+      onEachFeature: (f, layer) => {
+        if (f.properties.tipo === 'agua') return;
+        const d = dadosDistritoFeature(f);
+        const tp = totalPorProv[d.provincia] || 0;
+        layer.bindTooltip(`<strong>${d.nome}</strong> <span style="color:#666">(${d.provincia})</span><br>${d.total} ONGs · ${fmtPct(tp ? d.total / tp * 100 : 0)} das ONGs da província`, { sticky: true });
+        layer.on('mouseover', () => layer.setStyle({ weight: 2.5 }));
+        layer.on('mouseout', () => camadaDist.resetStyle(layer));
+        layer.on('click', () => {
+          if (d.id) window.location.href = urlDashboard + '?provincia=' + encodeURIComponent(d.provincia) + '&distrito_id=' + d.id;
+          else window.location.href = urlDashboard + '?provincia=' + encodeURIComponent(d.provincia);
+        });
+      }
+    }).addTo(mapa);
+    if (prov) mapa.fitBounds(limites || camadaDist.getBounds(), { padding: [20, 20] });
+    else mapa.fitBounds(limitesPais);
+    mostrarLegenda(maximo, prov ? 'ONGs por distrito' : 'ONGs por distrito (país)');
+    if (prov) tabelaDistritos(prov);
+    else {
+      const todos = dadosDist.slice().sort((a, b) => b.total - a.total).slice(0, 40)
+        .map(d => ({ nome: d.nome + ' (' + d.provincia + ')', total: d.total, pct: totalNacional ? d.total / totalNacional * 100 : 0 }));
+      preencherTabela('Top 40 distritos', 'Distrito', '% do total nacional', todos,
+        `Percentagem sobre os ${totalNacional} registos aprovados.`);
+    }
+    atualizarBotoes();
+  }
+
+  document.getElementById('btnNivelProv').addEventListener('click', () => desenharProvincias());
+  document.getElementById('btnNivelDist').addEventListener('click', () => desenharDistritos(null));
+  document.getElementById('btnVoltarPais').addEventListener('click', () => desenharProvincias());
+
+  Promise.all([
+    fetch("{{ url_for('static', filename='data/provincias_mocambique.geojson') }}").then(r => r.json()),
+    fetch("{{ url_for('static', filename='data/distritos_mocambique.geojson') }}").then(r => r.json())
+  ]).then(([gp, gd]) => { geoProv = gp; geoDist = gd; desenharProvincias(); })
+    .catch(() => {
+      document.getElementById('mapaProvincias').innerHTML =
+        '<div style="display:flex; align-items:center; justify-content:center; height:100%; color:var(--tinta-suave); font-size:0.85rem; text-align:center; padding:1rem;">' +
+        'Não foi possível carregar os ficheiros do mapa (static/data/*.geojson).</div>';
+    });
+</script>
+
+{% endblock %}

@@ -1,0 +1,67 @@
+{% extends "base.html" %}
+{% block titulo %}Auditoria{% endblock %}
+{% block topbar_titulo %}Histórico de Auditoria{% endblock %}
+
+{% block conteudo %}
+
+<section class="banner-pagina">
+  <div class="rotulo">Rastreabilidade</div>
+  <h1>Histórico de auditoria</h1>
+  <p>Quem fez o quê, quando e a partir de que IP — em todo o sistema{% if session.get('provincia') %} (limitado a {{ session.get('provincia') }}){% endif %}.</p>
+</section>
+
+<form method="get" action="{{ url_for('auditoria_geral') }}" class="barra-filtros">
+  <div class="campo-formulario" style="flex:1 1 200px;">
+    <label for="utilizador">Utilizador</label>
+    <select class="form-select form-select-sm" id="utilizador" name="utilizador">
+      <option value="">Todos</option>
+      {% for u in utilizadores_distintos %}
+      <option value="{{ u }}" {{ 'selected' if utilizador_filtro == u }}>{{ u }}</option>
+      {% endfor %}
+    </select>
+  </div>
+  <div class="campo-formulario" style="flex:1 1 220px;">
+    <label for="accao">Tipo de acção</label>
+    <select class="form-select form-select-sm" id="accao" name="accao">
+      <option value="">Todas</option>
+      {% for chave, rotulo in accoes.items() %}
+      <option value="{{ chave }}" {{ 'selected' if accao_filtro == chave }}>{{ rotulo }}</option>
+      {% endfor %}
+    </select>
+  </div>
+  <button type="submit" class="btn btn-primary btn-sm">Filtrar</button>
+  {% if utilizador_filtro or accao_filtro %}
+  <a href="{{ url_for('auditoria_geral') }}" class="btn btn-outline-secondary btn-sm">Limpar</a>
+  {% endif %}
+</form>
+
+<div class="contador-resultados">{{ entradas | length }} entrada(s) (últimas 300)</div>
+
+<table class="tabela-dados">
+  <thead>
+    <tr>
+      <th>Data/Hora</th>
+      <th>Utilizador</th>
+      <th>Acção</th>
+      <th>ONG</th>
+      <th>Resumo</th>
+      <th>IP</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for e in entradas %}
+    <tr>
+      <td style="white-space:nowrap;">{{ e.criado_em }}</td>
+      <td>{{ e.utilizador or '—' }}</td>
+      <td><span class="badge bg-secondary">{{ accoes.get(e.accao, e.accao) }}</span></td>
+      <td>{% if e.ong_id %}<a href="{{ url_for('detalhe', ong_id=e.ong_id) }}">{{ e.ong_nome or ('#' ~ e.ong_id) }}</a>{% else %}—{% endif %}</td>
+      <td style="font-size:0.85rem;">{{ e.resumo }}</td>
+      <td style="font-size:0.8rem; color:var(--tinta-suave);">{{ e.ip or '—' }}</td>
+    </tr>
+    {% else %}
+    <tr><td colspan="6" style="text-align:center; color:var(--tinta-suave); padding:2rem;">Sem registos de auditoria ainda.</td></tr>
+    {% endfor %}
+  </tbody>
+</table>
+
+{% endblock %}

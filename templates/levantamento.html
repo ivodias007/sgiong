@@ -1,0 +1,158 @@
+{% extends 'base.html' %}
+{% block titulo %}Levantamento Nacional (MPD) - SGIONGs{% endblock %}
+
+{% block conteudo %}
+<div class="mb-4">
+    <h4 class="mb-1">Levantamento Nacional de ONGs, OSCs e Fundações</h4>
+    <p class="text-muted mb-0">
+        Resumo da apresentação <em>"Levantamento de ONG's que Operam no País"</em> —
+        Ministério da Planificação e Desenvolvimento (MPD), Maputo, 29 de Abril de 2026.
+    </p>
+</div>
+
+<div class="alert alert-light border d-flex gap-2 align-items-start" role="alert">
+    <i class="bi bi-info-circle fs-5"></i>
+    <div>
+        O MPD, através da Direcção Nacional de Planificação e Desenvolvimento Institucional (DNPDI),
+        é responsável por coordenar a acção das ONGs e demais actores locais de desenvolvimento no país,
+        alinhando as suas intervenções com as prioridades nacionais (ENDE 2025-2044, PQG 2025-2029 e PESOE).
+        Este levantamento nacional resulta da recolha de informação junto das províncias, através dos
+        Serviços Provinciais de Actividades Económicas, e serve de contexto complementar aos dados
+        geridos neste sistema.
+    </div>
+</div>
+
+<div class="row g-3 mb-4">
+    <div class="col-md-3 col-6">
+        <div class="card text-center shadow-sm">
+            <div class="card-body">
+                <div class="fs-2 fw-bold text-dark">{{ total_geral }}</div>
+                <div class="text-muted small">Actores locais mapeados no país</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3 col-6">
+        <div class="card text-center shadow-sm">
+            <div class="card-body">
+                <div class="fs-2 fw-bold text-dark">{{ natureza_valores[0] }}</div>
+                <div class="text-muted small">ONGs</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3 col-6">
+        <div class="card text-center shadow-sm">
+            <div class="card-body">
+                <div class="fs-2 fw-bold text-dark">{{ natureza_valores[1] }}</div>
+                <div class="text-muted small">OSCs / Associações</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3 col-6">
+        <div class="card text-center shadow-sm">
+            <div class="card-body">
+                <div class="fs-2 fw-bold text-dark">{{ natureza_valores[2] }}</div>
+                <div class="text-muted small">Fundações</div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row g-3 mb-3">
+    <div class="col-md-7">
+        <div class="card shadow-sm h-100">
+            <div class="card-body">
+                <h6 class="card-title">Organizações por Província</h6>
+                <canvas id="graficoProvinciaMPD" height="260"></canvas>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-5">
+        <div class="card shadow-sm h-100">
+            <div class="card-body">
+                <h6 class="card-title">Origem (Nacional vs. Estrangeira)</h6>
+                <canvas id="graficoOrigemMPD" height="260"></canvas>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row g-3 mb-3">
+    <div class="col-md-12">
+        <div class="card shadow-sm h-100">
+            <div class="card-body">
+                <h6 class="card-title">Organizações por Sector de Actividade</h6>
+                <canvas id="graficoSectorMPD" height="180"></canvas>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row g-3 mb-4">
+    <div class="col-12">
+        <div class="card shadow-sm">
+            <div class="card-body">
+                <h6 class="card-title"><i class="bi bi-clipboard-check"></i> Principais Constatações</h6>
+                <ul class="mb-0">
+                    {% for c in constatacoes %}
+                    <li class="mb-2">{{ c }}</li>
+                    {% endfor %}
+                </ul>
+            </div>
+        </div>
+    </div>
+</div>
+
+<p class="text-muted small">
+    Nota: os números desta página são um resumo fixo do levantamento nacional do MPD e não
+    reflectem em tempo real os dados geridos no SGIONGs — consulta o
+    <a href="{{ url_for('dashboard') }}">Dashboard</a> para os dados actualmente registados no sistema.
+</p>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
+<script>
+new Chart(document.getElementById('graficoProvinciaMPD'), {
+    type: 'bar',
+    data: {
+        labels: {{ provincia_labels | tojson }},
+        datasets: [{
+            label: 'Organizações',
+            data: {{ provincia_valores | tojson }},
+            backgroundColor: '#0d6efd'
+        }]
+    },
+    options: {
+        indexAxis: 'y',
+        plugins: { legend: { display: false } },
+        scales: { x: { beginAtZero: true } }
+    }
+});
+
+new Chart(document.getElementById('graficoOrigemMPD'), {
+    type: 'doughnut',
+    data: {
+        labels: {{ origem_labels | tojson }},
+        datasets: [{
+            data: {{ origem_valores | tojson }},
+            backgroundColor: ['#fd7e14', '#20c997']
+        }]
+    },
+    options: { plugins: { legend: { position: 'bottom' } } }
+});
+
+new Chart(document.getElementById('graficoSectorMPD'), {
+    type: 'bar',
+    data: {
+        labels: {{ sector_labels | tojson }},
+        datasets: [{
+            label: 'Organizações',
+            data: {{ sector_valores | tojson }},
+            backgroundColor: '#6f42c1'
+        }]
+    },
+    options: {
+        plugins: { legend: { display: false } },
+        scales: { y: { beginAtZero: true } }
+    }
+});
+</script>
+{% endblock %}

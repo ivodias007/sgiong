@@ -1,0 +1,171 @@
+{% extends "base.html" %}
+{% block titulo %}{{ ong.nome }}{% endblock %}
+{% block topbar_titulo %}{{ ong.nome }}{% endblock %}
+
+{% block conteudo %}
+
+{% if ong.fase_workflow == 'Necessita Actualização' %}
+<div class="alert alert-warning">
+  <i class="bi bi-flag-fill"></i>
+  Esta ONG foi sinalizada para actualização por {{ ong.sinalizado_por }} em {{ ong.sinalizado_em }} —
+  motivo: {{ ong.sinalizado_motivo }}.
+  {% if session.get('nivel') %}<a href="{{ url_for('editar', ong_id=ong.id) }}">Editar agora</a>{% endif %}
+</div>
+{% elif ong.fase_workflow == 'Em Revisão' %}
+<div class="alert alert-info">
+  <i class="bi bi-arrow-repeat"></i>
+  Esta ONG está publicada, mas tem uma edição em revisão — os dados actuais mantêm-se até a edição ser aprovada.
+</div>
+{% endif %}
+
+{% if alteracao_pendente %}
+<div class="alert alert-warning">
+  <i class="bi bi-hourglass-split"></i>
+  Esta organização tem uma edição pendente de aprovação, submetida por {{ alteracao_pendente.solicitado_por }}
+  em {{ alteracao_pendente.solicitado_em }}.
+  {% if pode_aprovar %}
+    <a href="{{ url_for('pendentes') }}#edicao-{{ alteracao_pendente.id }}">Rever alterações</a>
+  {% endif %}
+  {% if diffs_pendentes %}
+  <table class="diff-tabela mt-2">
+    <thead><tr><th>Campo</th><th>Antes</th><th>Depois</th></tr></thead>
+    <tbody>
+      {% for d in diffs_pendentes %}
+      <tr><td>{{ d.rotulo }}</td><td class="diff-antigo">{{ d.antigo }}</td><td class="diff-novo">{{ d.novo }}</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  {% endif %}
+</div>
+{% endif %}
+
+<section class="banner-pagina d-flex align-items-center gap-3 flex-wrap">
+  {% if ong.logo_url %}
+  <img src="{{ ong.logo_url }}" alt="Logótipo de {{ ong.nome }}"
+       style="height:64px; width:64px; object-fit:contain; background:#fff; border-radius:4px; padding:4px; border:1px solid var(--cinza-linha);">
+  {% else %}
+  <span class="emblema-ong emblema-ong-grande" style="background:{{ ong.nome | cor_avatar }};">{{ ong.nome | iniciais }}</span>
+  {% endif %}
+  <div>
+    {% if ong.sigla %}<div class="rotulo">{{ ong.sigla }}</div>{% endif %}
+    <h1 style="margin-bottom:0.2rem;">{{ ong.nome }}</h1>
+    {% if ong.aprovacao == 'Aprovado' %}
+      <span class="selo-estado selo-estado--aprovado">Aprovado</span>
+    {% elif ong.aprovacao == 'Pendente' %}
+      <span class="selo-estado selo-estado--pendente">Pendente</span>
+    {% else %}
+      <span class="selo-estado selo-estado--rejeitado">{{ ong.aprovacao }}</span>
+    {% endif %}
+    {% if ong.fase_workflow and ong.fase_workflow not in ('Publicada',) %}
+      <span class="badge" style="background:var(--dourado); color:#1C1B18;">{{ ong.fase_workflow }}</span>
+    {% endif %}
+    {% if pode_aprovar and ong.aprovacao == 'Aprovado' and ong.fase_workflow != 'Necessita Actualização' %}
+      <button type="button" class="btn btn-sm btn-outline-warning ms-2" data-bs-toggle="modal" data-bs-target="#modalSinalizar">
+        <i class="bi bi-flag"></i> Sinalizar para actualização
+      </button>
+    {% endif %}
+  </div>
+</section>
+
+{% if pode_aprovar %}
+<div class="modal fade" id="modalSinalizar" tabindex="-1">
+  <div class="modal-dialog">
+    <form method="post" action="{{ url_for('sinalizar_atualizacao', ong_id=ong.id) }}" class="modal-content">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+      <div class="modal-header"><h5 class="modal-title">Sinalizar "{{ ong.nome }}" para actualização</h5></div>
+      <div class="modal-body">
+        <label for="motivo_sinal" class="form-label">Motivo</label>
+        <textarea class="form-control" id="motivo_sinal" name="motivo" rows="3" required
+                  placeholder="Ex.: contacto desactualizado, área de intervenção mudou..."></textarea>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancelar</button>
+        <button type="submit" class="btn btn-warning">Sinalizar</button>
+      </div>
+    </form>
+  </div>
+</div>
+{% endif %}
+
+<div class="grelha-cartoes mb-3">
+  <div class="cartao">
+    <h3>Natureza</h3>
+    <p style="margin:0;">{{ ong.natureza or '—' }}</p>
+  </div>
+  <div class="cartao">
+    <h3>Origem</h3>
+    <p style="margin:0;">{{ ong.origem or '—' }}</p>
+  </div>
+  <div class="cartao">
+    <h3>Província(s)</h3>
+    <p style="margin:0;">{{ provincias_ong | join(', ') if provincias_ong else '—' }}</p>
+  </div>
+  <div class="cartao">
+    <h3>Distrito(s)</h3>
+    <p style="margin:0;">{{ distritos | map(attribute='nome') | join(', ') if distritos else (ong.distritos_texto or '—') }}</p>
+  </div>
+  <div class="cartao">
+    <h3>Área/s Temática/s</h3>
+    <p style="margin:0;">{{ areas | map(attribute='nome') | join(', ') if areas else (ong.area_intervencao or '—') }}</p>
+  </div>
+  {% if ramificacoes %}
+  <div class="cartao">
+    <h3>Ramificações</h3>
+    <p style="margin:0;">{{ ramificacoes | map(attribute='nome') | join(', ') }}</p>
+  </div>
+  {% endif %}
+  {% if ong.ano_entrada_pais %}
+  <div class="cartao">
+    <h3>Ano de entrada no país</h3>
+    <p style="margin:0;">{{ ong.ano_entrada_pais }}</p>
+  </div>
+  {% endif %}
+  <div class="cartao">
+    <h3>Fonte de financiamento</h3>
+    <p style="margin:0;">{{ ong.fonte_financiamento or '—' }}</p>
+  </div>
+  <div class="cartao">
+    <h3>Ponto focal</h3>
+    <p style="margin:0;">{{ ong.pessoa_contacto or '—' }}</p>
+    <p style="margin:0; font-size:0.85rem;">{{ ong.telefone or '' }} {{ ong.email or '' }}</p>
+  </div>
+</div>
+
+{% if ong.programas or ong.projetos_em_curso or ong.perfil_grupo_alvo %}
+<div class="cartao mb-3">
+  {% if ong.programas %}<h3>Programas</h3><p>{{ ong.programas }}</p>{% endif %}
+  {% if ong.projetos_em_curso %}<h3>Projectos em curso</h3><p>{{ ong.projetos_em_curso }}</p>{% endif %}
+  {% if ong.perfil_grupo_alvo %}<h3>Perfil do grupo alvo</h3><p>{{ ong.perfil_grupo_alvo }}</p>{% endif %}
+</div>
+{% endif %}
+
+{% if session.get('nivel') %}
+<div class="d-flex gap-2">
+  <a href="{{ url_for('editar', ong_id=ong.id) }}" class="btn btn-primary"><i class="bi bi-pencil"></i> Editar</a>
+  <a href="{{ url_for('index') }}" class="btn btn-outline-secondary">Voltar à listagem</a>
+  {% if pode_eliminar %}
+  <form method="post" action="{{ url_for('eliminar', ong_id=ong.id) }}"
+        onsubmit="return confirm('Tem a certeza que quer eliminar esta ONG? Esta acção não pode ser desfeita.');" class="ms-auto">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+    <button type="submit" class="btn btn-outline-danger"><i class="bi bi-trash"></i> Eliminar</button>
+  </form>
+  {% endif %}
+</div>
+{% endif %}
+
+{% if historico %}
+<div class="cartao mt-3">
+  <h3><i class="bi bi-clock-history"></i> Histórico desta ONG</h3>
+  <ul style="list-style:none; padding:0; margin:0; font-size:0.88rem;">
+    {% for h in historico %}
+    <li style="padding:0.5rem 0; border-bottom:1px solid var(--cinza-linha);">
+      <span style="color:var(--tinta-suave); font-variant-numeric:tabular-nums;">{{ h.criado_em }}</span>
+      — {{ h.resumo }}
+      {% if h.ip %}<span style="color:var(--tinta-suave); font-size:0.78rem;"> (IP {{ h.ip }})</span>{% endif %}
+    </li>
+    {% endfor %}
+  </ul>
+</div>
+{% endif %}
+
+{% endblock %}

@@ -1,0 +1,41 @@
+{% extends "base.html" %}
+{% block titulo %}Possíveis Duplicados{% endblock %}
+{% block topbar_titulo %}Possíveis Duplicados{% endblock %}
+
+{% block conteudo %}
+
+<section class="banner-pagina">
+  <div class="rotulo">Qualidade dos dados</div>
+  <h1>Possíveis duplicados</h1>
+  <p>Todos os registos com nome igual ou parecido (mínimo {{ limiar }}% de correspondência) aparecem juntos numa só linha.</p>
+</section>
+
+<div class="contador-resultados">{{ grupos | length }} grupo(s) · {{ grupos | map(attribute="registos") | map("length") | sum }} registos envolvidos</div>
+
+{% for g in grupos %}
+<div class="cartao-pendencia">
+  <div class="d-flex justify-content-between align-items-start flex-wrap gap-3">
+    <div class="d-flex gap-2 flex-wrap align-items-stretch flex-grow-1">
+      {% for r in g.registos %}
+      <div style="border:1px solid var(--cinza-linha); border-radius:6px; padding:.5rem .75rem; background:#fff; min-width:200px; max-width:320px;">
+        <a href="{{ url_for('detalhe', ong_id=r.id) }}"><strong>{{ r.nome }}</strong></a>
+        <div style="font-size:0.8rem; color:var(--tinta-suave);">#{{ r.id }} · {{ r.provincia or '—' }}{% if r.sigla %} · {{ r.sigla }}{% endif %}</div>
+      </div>
+      {% endfor %}
+    </div>
+    <div class="text-end">
+      <span class="badge" style="background:var(--terracota); font-size:0.9rem;">{{ g.registos | length }} registos · até {{ g.pontuacao }}%</span>
+      <div style="font-size:0.78rem; color:var(--tinta-suave); margin-top:0.3rem;">{{ g.motivos | join(', ') }}</div>
+    </div>
+  </div>
+  <form method="post" action="{{ url_for('duplicados_ignorar') }}" class="mt-2">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+    <input type="hidden" name="ids" value="{{ g.ids }}">
+    <button type="submit" class="btn btn-sm btn-outline-secondary">Não são duplicados — não sugerir de novo</button>
+  </form>
+</div>
+{% else %}
+<p class="text-muted">Nenhum grupo com semelhança suficiente para sinalizar. Bom sinal.</p>
+{% endfor %}
+
+{% endblock %}

@@ -1,0 +1,190 @@
+{#
+  A rota index() em app.py já usa "SELECT DISTINCT o.*" mesmo com os JOINs
+  de província/distrito/área/ramificação — por isso esta listagem não sofre
+  do problema clássico de duplicação de linhas por relação multi-valor.
+#}
+{% extends "base.html" %}
+{% block titulo %}ONGs{% endblock %}
+{% block topbar_titulo %}Organizações Não Governamentais{% endblock %}
+
+{% block conteudo %}
+
+<form method="get" action="{{ url_for('index') }}" class="barra-filtros">
+  <div class="campo-formulario" style="flex:2 1 220px;">
+    <label for="q">Pesquisar</label>
+    <input type="text" class="form-control form-control-sm" id="q" name="q" value="{{ filtros.q }}" placeholder="Nome ou sigla...">
+  </div>
+  {% if session.get('provincia') %}
+  <div class="campo-formulario" style="flex:1 1 160px;">
+    <label>Província</label>
+    <div class="form-control form-control-sm bg-light">{{ session.get('provincia') }} <i class="bi bi-lock-fill text-muted"></i></div>
+  </div>
+  {% else %}
+  <div class="campo-formulario" style="flex:1 1 160px;">
+    <label for="provincia">Província</label>
+    <select class="form-select form-select-sm" id="provincia" name="provincia">
+      <option value="">Todas</option>
+      {% for p in provincias %}
+      <option value="{{ p }}" {{ 'selected' if filtros.provincia == p }}>{{ p }}</option>
+      {% endfor %}
+    </select>
+  </div>
+  {% endif %}
+  <div class="campo-formulario" id="campo-distrito" style="flex:1 1 170px; {{ '' if filtros.provincia or session.get('provincia') else 'display:none;' }}">
+    <label for="distrito_id">Distrito</label>
+    <select class="form-select form-select-sm" id="distrito_id" name="distrito_id">
+      <option value="">Todos os distritos</option>
+      {% for d in distritos %}
+      <option value="{{ d.id }}" {{ 'selected' if filtros.distrito_id == d.id | string }}>{{ d.nome }}</option>
+      {% endfor %}
+    </select>
+  </div>
+  <div class="campo-formulario" style="flex:1 1 180px;">
+    <label for="area_id">Área temática</label>
+    <select class="form-select form-select-sm" id="area_id" name="area_id">
+      <option value="">Todas</option>
+      {% for a in areas %}
+      <option value="{{ a.id }}" {{ 'selected' if filtros.area_id == a.id | string }}>{{ a.nome }}</option>
+      {% endfor %}
+    </select>
+  </div>
+  <div class="campo-formulario" style="flex:1 1 140px;">
+    <label for="natureza">Natureza</label>
+    <select class="form-select form-select-sm" id="natureza" name="natureza">
+      <option value="">Todas</option>
+      <option value="ONG" {{ 'selected' if filtros.natureza == 'ONG' }}>ONG</option>
+      <option value="OSC" {{ 'selected' if filtros.natureza == 'OSC' }}>OSC</option>
+      <option value="Fundação" {{ 'selected' if filtros.natureza == 'Fundação' }}>Fundação</option>
+    </select>
+  </div>
+  <div class="campo-formulario" style="flex:1 1 140px;">
+    <label for="origem">Origem</label>
+    <select class="form-select form-select-sm" id="origem" name="origem">
+      <option value="">Todas</option>
+      <option value="Nacional" {{ 'selected' if filtros.origem == 'Nacional' }}>Nacional</option>
+      <option value="Estrangeira" {{ 'selected' if filtros.origem == 'Estrangeira' }}>Estrangeira</option>
+    </select>
+  </div>
+  <button type="submit" class="btn btn-primary btn-sm">Filtrar</button>
+  <button type="button" class="btn btn-outline-secondary btn-sm" data-bs-toggle="collapse" data-bs-target="#filtrosAvancados">
+    <i class="bi bi-sliders"></i> Mais filtros
+  </button>
+  {% if filtros.q or filtros.provincia or filtros.area_id or filtros.natureza or filtros.origem
+        or filtros.distrito_id or filtros.publico_alvo or filtros.contacto or filtros.ano_desde or filtros.ano_ate %}
+  <a href="{{ url_for('index') }}" class="btn btn-outline-secondary btn-sm">Limpar</a>
+  {% endif %}
+
+  <div class="collapse {{ 'show' if filtros.publico_alvo or filtros.contacto or filtros.ano_desde or filtros.ano_ate }} w-100 mt-2" id="filtrosAvancados">
+    <div class="d-flex gap-2 flex-wrap pt-2" style="border-top:1px solid var(--cinza-linha);">
+      <div class="campo-formulario" style="flex:1 1 180px;">
+        <label for="publico_alvo">Público-alvo</label>
+        <input type="text" class="form-control form-control-sm" id="publico_alvo" name="publico_alvo"
+               value="{{ filtros.publico_alvo }}" placeholder="Ex.: mulheres, crianças...">
+      </div>
+      <div class="campo-formulario" style="flex:1 1 180px;">
+        <label for="contacto">Contacto</label>
+        <input type="text" class="form-control form-control-sm" id="contacto" name="contacto"
+               value="{{ filtros.contacto }}" placeholder="Nome, telefone ou email...">
+      </div>
+      <div class="campo-formulario" style="flex:1 1 110px;">
+        <label for="ano_desde">Entrada desde</label>
+        <input type="number" class="form-control form-control-sm" id="ano_desde" name="ano_desde"
+               value="{{ filtros.ano_desde }}" placeholder="Ex.: 2000">
+      </div>
+      <div class="campo-formulario" style="flex:1 1 110px;">
+        <label for="ano_ate">Entrada até</label>
+        <input type="number" class="form-control form-control-sm" id="ano_ate" name="ano_ate"
+               value="{{ filtros.ano_ate }}" placeholder="Ex.: 2026">
+      </div>
+    </div>
+  </div>
+</form>
+
+<div class="contador-resultados d-flex justify-content-between align-items-center">
+  <span>{{ total }} organização(ões) encontrada(s)</span>
+  {% if session.get('nivel') %}
+  <a href="{{ url_for('novo') }}" class="btn btn-sm btn-primary"><i class="bi bi-plus-circle"></i> Registar nova ONG</a>
+  {% endif %}
+</div>
+
+<table class="tabela-dados">
+  <thead>
+    <tr>
+      <th></th>
+      <th>Nome</th>
+      <th>Província(s)</th>
+      <th>Natureza</th>
+      <th>Origem</th>
+      <th>Estado</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for ong in ongs %}
+    <tr>
+      <td>
+        {% if ong.logo_url %}
+        <img src="{{ ong.logo_url }}" alt="" style="height:32px; width:32px; object-fit:contain; border-radius:50%; border:1px solid var(--cinza-linha); background:#fff;">
+        {% else %}
+        <span class="emblema-ong" style="background:{{ ong.nome | cor_avatar }};">{{ ong.nome | iniciais }}</span>
+        {% endif %}
+      </td>
+      <td>
+        <a href="{{ url_for('detalhe', ong_id=ong.id) }}">{{ ong.nome }}</a>
+        {% if ong.sigla %}<div style="font-size:0.78rem; color:var(--tinta-suave);">{{ ong.sigla }}</div>{% endif %}
+      </td>
+      <td>{{ (provincias_para_ongs.get(ong.id) or ([ong.provincia] if ong.provincia else [])) | join(', ') }}</td>
+      <td>{{ ong.natureza or '—' }}</td>
+      <td>{{ ong.origem or '—' }}</td>
+      <td>
+        {% if ong.aprovacao == 'Aprovado' %}
+          <span class="selo-estado selo-estado--aprovado">Aprovado</span>
+        {% elif ong.aprovacao == 'Pendente' %}
+          <span class="selo-estado selo-estado--pendente">Pendente</span>
+        {% else %}
+          <span class="selo-estado selo-estado--rejeitado">{{ ong.aprovacao }}</span>
+        {% endif %}
+      </td>
+    </tr>
+    {% else %}
+    <tr><td colspan="6" style="text-align:center; color:var(--tinta-suave); padding:2rem;">Nenhuma organização corresponde aos filtros aplicados.</td></tr>
+    {% endfor %}
+  </tbody>
+</table>
+
+{% if total_paginas > 1 %}
+<div class="paginacao">
+  {% set args = request.args.to_dict() %}
+  {% set _ = args.pop('pagina', None) %}
+  <a href="{{ url_for('index', pagina=pagina-1, **args) }}" class="{{ 'desactivada' if pagina <= 1 }}">‹</a>
+  {# janela compacta: 1 … (p-2..p+2) … última — evita centenas de links e o transbordo em telemóvel #}
+  {% set ns = namespace(ultimo=0) %}
+  {% for n in range(1, total_paginas + 1) %}
+    {% if n == 1 or n == total_paginas or (n >= pagina - 2 and n <= pagina + 2) %}
+      {% if n - ns.ultimo > 1 %}<span>…</span>{% endif %}
+      <a href="{{ url_for('index', pagina=n, **args) }}" class="{{ 'activa' if n == pagina }}">{{ n }}</a>
+      {% set ns.ultimo = n %}
+    {% endif %}
+  {% endfor %}
+  <a href="{{ url_for('index', pagina=pagina+1, **args) }}" class="{{ 'desactivada' if pagina >= total_paginas }}">›</a>
+</div>
+{% endif %}
+
+
+<script>
+  // Caixa de distritos: aparece logo que se escolhe a província e lista só os distritos dela.
+  (function () {
+    const dados = {{ distritos_por_prov | tojson }};
+    const selProv = document.getElementById('provincia');
+    const selDist = document.getElementById('distrito_id');
+    const campo = document.getElementById('campo-distrito');
+    if (!selProv || !selDist) return;
+    selProv.addEventListener('change', function () {
+      const lista = dados[selProv.value] || [];
+      selDist.innerHTML = '<option value="">Todos os distritos</option>' +
+        lista.map(d => '<option value="' + d.id + '">' + d.nome + '</option>').join('');
+      campo.style.display = selProv.value ? '' : 'none';
+      if (selProv.value) selDist.focus();
+    });
+  })();
+</script>
+{% endblock %}

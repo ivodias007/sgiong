@@ -1,0 +1,510 @@
+/* =============================================================
+   SGIONGs — identidade visual institucional (2026)
+   Mantém a estrutura de sidebar/topbar já existente (mesmas classes
+   e comportamento JS em base.html) — só muda paleta, tipografia e
+   acrescenta componentes de conteúdo novos, para não partir nenhuma
+   página que ainda não foi redesenhada (organizacoes.html, sector.html,
+   levantamento.html continuam a funcionar sem alterações).
+   ============================================================= */
+
+@import url('https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;0,6..72,600;1,6..72,500&family=Public+Sans:wght@400;500;600;700&display=swap');
+
+:root {
+    /* Paleta institucional — substitui o verde genérico anterior */
+    --verde: #0B4228;
+    --verde-escuro: #082E1C;
+    --verde-claro: #3E7A5C;
+    --terracota: #B5451B;
+    --terracota-escuro: #8F3714;
+    --dourado: #B08A3E;
+    --papel: #FBF9F5;
+    --cinza-linha: #E4E0D8;
+    --tinta: #1C1B18;
+    --tinta-suave: #52514C;
+
+    --fonte-titulo: 'Newsreader', Georgia, serif;
+    --fonte-corpo: 'Public Sans', 'Segoe UI', sans-serif;
+
+    --sidebar-w: 240px;
+    --topbar-h: 56px;
+    --bg-pagina: #F5F2EC;
+    --bg-sidebar: var(--verde-escuro);
+    --texto-sidebar: rgba(255,255,255,0.85);
+    --texto-sidebar-ativo: #ffffff;
+    --transicao: 0.25s ease;
+    --raio: 4px;
+    --sombra: 0 1px 3px rgba(28, 27, 24, 0.08);
+}
+
+/* ---- Reset ---- */
+*, *::before, *::after { box-sizing: border-box; }
+body {
+    margin: 0;
+    background: var(--bg-pagina);
+    font-family: var(--fonte-corpo);
+    color: var(--tinta);
+    overflow-x: hidden;
+}
+h1, h2, h3, h4, h5 { font-family: var(--fonte-titulo); font-weight: 600; color: var(--verde-escuro); }
+
+/* ===================== SIDEBAR ===================== */
+#sidebar {
+    position: fixed;
+    top: 0; left: 0;
+    width: var(--sidebar-w);
+    height: 100vh;
+    background: var(--bg-sidebar);
+    background-image: radial-gradient(circle at 15% 15%, rgba(176,138,62,0.15), transparent 45%);
+    display: flex;
+    flex-direction: column;
+    z-index: 1050;
+    transition: transform var(--transicao);
+    overflow-y: auto;
+}
+
+#sidebar.fechada { transform: translateX(calc(-1 * var(--sidebar-w))); }
+
+.sidebar-logo {
+    padding: 20px 20px 16px;
+    color: #fff;
+    font-family: var(--fonte-titulo);
+    font-size: 1.2rem;
+    font-weight: 600;
+    letter-spacing: 0.3px;
+    border-bottom: 3px solid var(--dourado);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    line-height: 1.2;
+    min-height: var(--topbar-h);
+}
+.sidebar-logo span { font-family: var(--fonte-corpo); font-size: 0.7rem; font-weight: 400; opacity: 0.7; display: block; }
+.sidebar-logo i { font-size: 1.4rem; flex-shrink: 0; }
+
+.bandeira-logo {
+    width: 28px; height: 19px; object-fit: cover; border-radius: 3px;
+    flex-shrink: 0; box-shadow: 0 0 0 1px rgba(255,255,255,0.25);
+}
+
+.sidebar-nav { padding: 12px 0; flex: 1; }
+
+.sidebar-link {
+    display: flex; align-items: center; gap: 12px;
+    padding: 12px 20px;
+    color: var(--texto-sidebar);
+    text-decoration: none;
+    font-size: 0.92rem;
+    transition: background var(--transicao), color var(--transicao);
+    border-left: 3px solid transparent;
+}
+.sidebar-link:hover { background: rgba(255,255,255,0.1); color: #fff; text-decoration: none; }
+.sidebar-link.active {
+    background: rgba(176,138,62,0.18);
+    color: var(--texto-sidebar-ativo);
+    border-left-color: var(--dourado);
+    font-weight: 600;
+}
+.sidebar-link i { font-size: 1.05rem; width: 20px; flex-shrink: 0; }
+.sidebar-link-logout { color: rgba(224,147,124,0.85); }
+.sidebar-link-logout:hover { color: #E0937C; }
+.sidebar-divider { margin: 8px 20px; border-top: 1px solid rgba(255,255,255,0.15); }
+.sidebar-footer {
+    padding: 12px 20px; font-size: 0.68rem; color: rgba(255,255,255,0.45);
+    border-top: 1px solid rgba(255,255,255,0.1); line-height: 1.4;
+}
+
+/* ===================== OVERLAY (mobile) ===================== */
+#sidebar-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.45); z-index: 1040; }
+
+/* ===================== MAIN WRAPPER ===================== */
+#main-wrapper {
+    margin-left: var(--sidebar-w);
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    transition: margin-left var(--transicao);
+}
+#main-wrapper.expandido { margin-left: 0; }
+
+/* ===================== TOPBAR ===================== */
+#topbar {
+    position: sticky; top: 0; z-index: 1000;
+    height: var(--topbar-h);
+    background: var(--verde-escuro);
+    display: flex; align-items: center;
+    padding: 0 20px; gap: 14px;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.15);
+    border-bottom: 1px solid rgba(176,138,62,0.3);
+}
+#btn-sidebar {
+    background: none; border: none; color: #fff; font-size: 1.6rem;
+    cursor: pointer; padding: 4px 8px; border-radius: 6px; line-height: 1;
+    flex-shrink: 0; transition: background 0.15s;
+}
+#btn-sidebar:hover { background: rgba(255,255,255,0.15); }
+.topbar-titulo { color: #fff; font-family: var(--fonte-titulo); font-size: 1rem; font-weight: 600; flex: 1; }
+.topbar-direita { margin-left: auto; }
+.topbar-admin { color: rgba(255,255,255,0.75); font-size: 0.8rem; }
+
+/* ===================== CONTEÚDO ===================== */
+#main-content { flex: 1; padding: 28px 28px 20px; }
+#rodape {
+    padding: 14px 28px; font-size: 0.72rem; color: var(--tinta-suave);
+    border-top: 1px solid var(--cinza-linha); background: var(--papel);
+}
+
+/* ===================== BOOTSTRAP RESKIN (páginas ainda não redesenhadas) ===================== */
+.btn-primary, .btn-success { background-color: var(--verde); border-color: var(--verde); }
+.btn-primary:hover, .btn-primary:focus,
+.btn-success:hover, .btn-success:focus { background-color: var(--verde-escuro); border-color: var(--verde-escuro); }
+.btn-outline-primary { color: var(--verde); border-color: var(--verde); }
+.btn-outline-primary:hover { background-color: var(--verde); border-color: var(--verde); }
+.nav-tabs .nav-link.active { color: var(--verde-escuro); font-weight: 600; }
+.progress-bar.bg-dark { background-color: var(--verde) !important; }
+.card-title { font-size: 1rem; font-family: var(--fonte-titulo); }
+
+/* ===================== HERO DA PÁGINA INICIAL ===================== */
+.hero-sigeong {
+    background: linear-gradient(135deg, var(--verde-escuro) 0%, var(--verde) 60%, var(--verde-claro) 100%);
+}
+#relogio-inicio { font-variant-numeric: tabular-nums; }
+
+/* ===================== EMBLEMA/AVATAR DAS ONGs ===================== */
+.emblema-ong {
+    width: 42px; height: 42px; min-width: 42px; border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    color: #fff; font-weight: 700; font-size: 0.95rem; letter-spacing: 0.5px; flex-shrink: 0;
+}
+.emblema-ong-grande { width: 64px; height: 64px; min-width: 64px; font-size: 1.3rem; }
+
+/* ===================== MOBILE ===================== */
+@media (max-width: 768px) {
+    #sidebar { transform: translateX(calc(-1 * var(--sidebar-w))); }
+    #sidebar.aberta { transform: translateX(0); }
+    #main-wrapper { margin-left: 0 !important; min-width: 0; }
+    #main-content { padding: 16px; }
+    #topbar { padding: 0 10px; gap: 8px; }
+    .topbar-titulo { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .topbar-direita { gap: 0.5rem !important; flex-shrink: 0; }
+    .topbar-admin-texto { display: none; }
+    .paginacao { flex-wrap: wrap; }
+    /* tabelas largas rolam dentro do ecrã em vez de alargarem a página */
+    .badge { white-space: normal; text-align: left; }
+    table.tabela-dados { display: block; max-width: 100%; overflow-x: auto; -webkit-overflow-scrolling: touch; }
+}
+
+/* =================================================================
+   COMPONENTES DE CONTEÚDO NOVOS (usados nas páginas já redesenhadas:
+   inicio, index/listagem, dashboard, pendentes, detalhe, formulario, login)
+   ================================================================= */
+
+.banner-pagina {
+    background: linear-gradient(120deg, var(--verde) 0%, var(--verde-escuro) 100%);
+    color: #F3F1E9;
+    padding: 1.75rem 2rem;
+    border-radius: var(--raio);
+    margin-bottom: 1.5rem;
+}
+.banner-pagina .rotulo { font-size: 0.8rem; color: #C9E3D2; margin-bottom: 0.25rem; }
+.banner-pagina h1 { color: #fff; margin: 0 0 0.3rem; font-size: 1.6rem; }
+.banner-pagina p { color: #DCE7DF; margin: 0; max-width: 60ch; }
+
+.grelha-cartoes { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px,1fr)); gap: 1rem; }
+.cartao {
+    background: #fff; border: 1px solid var(--cinza-linha); border-radius: var(--raio);
+    padding: 1.1rem 1.25rem; box-shadow: var(--sombra);
+    transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+}
+.cartao:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 18px rgba(11, 66, 40, 0.10);
+    border-color: rgba(176, 138, 62, 0.4);
+}
+.cartao h3 { font-size: 1rem; margin: 0.2rem 0 0.3rem; }
+.cartao p { font-size: 0.88rem; color: var(--tinta-suave); margin: 0 0 0.5rem; }
+.cartao a.explorar { font-size: 0.85rem; font-weight: 600; transition: gap 0.15s ease; display: inline-block; }
+.cartao a.explorar:hover { transform: translateX(2px); }
+
+.faixa-estatisticas {
+    display: grid; grid-template-columns: repeat(auto-fit, minmax(150px,1fr));
+    background: var(--verde-escuro); color: #fff; border-radius: var(--raio); overflow: hidden; margin-bottom: 1.5rem;
+}
+.estatistica { padding: 1.25rem; border-left: 1px solid rgba(255,255,255,0.12); }
+.estatistica:first-child { border-left: none; }
+.estatistica .numero { font-family: var(--fonte-titulo); font-size: 1.8rem; display: block; }
+.estatistica .rotulo { font-size: 0.8rem; color: #C9E3D2; }
+
+.tabela-dados { width: 100%; border-collapse: collapse; background: #fff; font-size: 0.9rem; }
+.tabela-dados th {
+    text-align: left; font-weight: 600; font-size: 0.78rem; color: var(--verde-escuro);
+    padding: 0.65rem 0.8rem; border-bottom: 2px solid var(--dourado); background: var(--papel);
+}
+.tabela-dados td { padding: 0.65rem 0.8rem; border-bottom: 1px solid var(--cinza-linha); vertical-align: middle; }
+.tabela-dados tr:hover td { background: var(--papel); }
+
+.selo-estado { display: inline-block; font-size: 0.72rem; font-weight: 600; padding: 0.15rem 0.55rem; border-radius: 999px; }
+.selo-estado--aprovado { background: #E3EFE6; color: var(--verde); }
+.selo-estado--pendente { background: #F7E9DC; color: var(--terracota-escuro); }
+.selo-estado--rejeitado { background: #F3E1DE; color: #8C2E22; }
+
+.barra-filtros {
+    display: flex; gap: 0.75rem; flex-wrap: wrap; align-items: flex-end;
+    background: var(--papel); border: 1px solid var(--cinza-linha); border-radius: var(--raio);
+    padding: 1rem; margin-bottom: 1.1rem;
+}
+.campo-formulario { margin-bottom: 0; }
+.campo-formulario label { display: block; font-size: 0.82rem; font-weight: 600; margin-bottom: 0.3rem; color: var(--verde-escuro); }
+.contador-resultados { font-size: 0.85rem; color: var(--tinta-suave); margin-bottom: 0.75rem; }
+
+.paginacao { display: flex; justify-content: center; gap: 0.4rem; margin-top: 1.25rem; }
+.paginacao a, .paginacao span {
+    display: inline-flex; align-items: center; justify-content: center; min-width: 2.1rem; height: 2.1rem;
+    border-radius: var(--raio); font-size: 0.85rem; border: 1px solid var(--cinza-linha); color: var(--tinta);
+}
+.paginacao a:hover { background: var(--papel); text-decoration: none; }
+.paginacao .activa { background: var(--verde); color: #fff; border-color: var(--verde); }
+.paginacao .desactivada { color: var(--cinza-linha); pointer-events: none; }
+
+.diff-tabela { width: 100%; border-collapse: collapse; font-size: 0.88rem; margin-top: 0.5rem; }
+.diff-tabela th { text-align: left; padding: 0.5rem 0.7rem; background: var(--papel); font-size: 0.76rem; color: var(--verde-escuro); }
+.diff-tabela td { padding: 0.5rem 0.7rem; border-bottom: 1px solid var(--cinza-linha); vertical-align: top; }
+.diff-antigo { color: #8C2E22; text-decoration: line-through; background: #FBF0EE; }
+.diff-novo { color: #1E5B36; background: #EEF6F0; }
+
+.cartao-pendencia {
+    background: #fff; border: 1px solid var(--cinza-linha); border-left: 4px solid var(--terracota);
+    border-radius: var(--raio); padding: 1rem 1.25rem; margin-bottom: 0.9rem;
+}
+
+.pagina-auth { min-height: 60vh; display: flex; align-items: center; justify-content: center; padding: 2rem; }
+.cartao-auth {
+    background: #fff; border: 1px solid var(--cinza-linha); border-top: 4px solid var(--dourado);
+    border-radius: var(--raio); padding: 2.25rem; width: 100%; max-width: 380px; box-shadow: var(--sombra);
+}
+
+.chips-contexto { display: flex; gap: 0.6rem; flex-wrap: wrap; font-size: 0.82rem; color: var(--tinta-suave); margin-bottom: 1.25rem; }
+.chips-contexto span { padding: 0.25rem 0.7rem; border: 1px solid var(--cinza-linha); border-radius: 999px; }
+
+/* =================================================================
+   PORTAL PÚBLICO — visível apenas quando não há sessão iniciada.
+   Substitui a sidebar/topbar da área interna por uma barra de
+   navegação horizontal simples, mais adequada a um visitante externo.
+   ================================================================= */
+#topbar-publico {
+    display: flex; align-items: center; gap: 1.5rem;
+    padding: 0.75rem 1.5rem;
+    background: var(--verde-escuro);
+    border-bottom: 3px solid var(--dourado);
+    flex-wrap: wrap;
+}
+.topbar-publico-logo {
+    display: flex; align-items: center; gap: 10px;
+    color: #fff; text-decoration: none;
+    font-family: var(--fonte-titulo); font-weight: 600; font-size: 1.05rem;
+    line-height: 1.15;
+}
+.topbar-publico-logo:hover { color: #fff; text-decoration: none; }
+.topbar-publico-logo span {
+    display: block; font-family: var(--fonte-corpo); font-weight: 400;
+    font-size: 0.68rem; color: rgba(255,255,255,0.7);
+}
+.nav-publico { display: flex; gap: 1.25rem; flex-wrap: wrap; margin-left: 0.5rem; flex: 1; }
+.nav-publico a {
+    color: rgba(255,255,255,0.85); text-decoration: none; font-size: 0.9rem;
+    padding: 0.3rem 0; border-bottom: 2px solid transparent;
+}
+.nav-publico a:hover, .nav-publico a.active {
+    color: #fff; border-bottom-color: var(--dourado);
+}
+.btn-acesso-interno {
+    color: #fff; border: 1px solid rgba(255,255,255,0.35); border-radius: 999px;
+    padding: 0.4rem 1rem; font-size: 0.82rem; text-decoration: none; white-space: nowrap;
+    transition: background 0.15s;
+}
+.btn-acesso-interno:hover { background: rgba(255,255,255,0.12); color: #fff; }
+
+#rodape-publico {
+    margin-top: 2rem; padding: 1.5rem; background: var(--papel);
+    border-top: 1px solid var(--cinza-linha);
+    display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.75rem;
+    font-size: 0.85rem; color: var(--tinta-suave);
+}
+#rodape-publico a { color: var(--verde); }
+
+@media (max-width: 768px) {
+    #topbar-publico { flex-direction: column; align-items: flex-start; }
+    .nav-publico { gap: 0.85rem; }
+    #rodape-publico { flex-direction: column; align-items: flex-start; text-align: left; }
+}
+
+/* =================================================================
+   POLIMENTO VISUAL — micro-interações, textura institucional e
+   notificações em toast, sem alterar nenhuma estrutura ou lógica.
+   ================================================================= */
+
+/* Textura subtil de fundo nos banners (losangos finos, evocando
+   capulana/tecido tradicional, sem pesar a página — é só CSS). */
+.banner-pagina, .painel-escuro, #topbar-publico {
+    position: relative;
+    overflow: hidden;
+}
+.banner-pagina::before, .painel-escuro::before {
+    content: '';
+    position: absolute; inset: 0;
+    background-image:
+        linear-gradient(135deg, rgba(255,255,255,0.045) 25%, transparent 25%),
+        linear-gradient(225deg, rgba(255,255,255,0.045) 25%, transparent 25%),
+        linear-gradient(45deg, rgba(255,255,255,0.045) 25%, transparent 25%),
+        linear-gradient(315deg, rgba(255,255,255,0.045) 25%, transparent 25%);
+    background-position: 20px 0, 20px 0, 0 0, 0 0;
+    background-size: 40px 40px;
+    background-repeat: repeat;
+    pointer-events: none;
+}
+.banner-pagina > *, .painel-escuro > * { position: relative; z-index: 1; }
+
+/* Cartões de estatística: leve elevação ao passar o rato, número
+   ganha destaque. */
+.estatistica { transition: background 0.2s ease; }
+.estatistica:hover { background: rgba(255,255,255,0.06); }
+.estatistica .icone { display: block; font-size: 1.1rem; color: var(--dourado); margin-bottom: 0.3rem; opacity: 0.9; }
+.estatistica .numero { transition: color 0.2s ease; }
+
+/* Botões: micro-interação de elevação, consistente em toda a app. */
+.btn, .botao {
+    transition: transform 0.15s ease, box-shadow 0.15s ease, background-color 0.15s ease;
+}
+.btn:hover, .botao:hover { transform: translateY(-1px); }
+.btn-primary:hover, .btn.btn-primary:hover {
+    box-shadow: 0 4px 12px rgba(11, 66, 40, 0.25);
+}
+.btn:active, .botao:active { transform: translateY(0); }
+
+/* Sidebar: destaque activo com barra lateral animada. */
+.sidebar-link { transition: background 0.15s ease, padding-left 0.15s ease, color 0.15s ease; }
+.sidebar-link:hover { padding-left: 24px; }
+
+/* Emblemas/avatares: leve escala ao passar o rato numa linha de tabela. */
+.tabela-dados tr { transition: background 0.15s ease; }
+.emblema-ong { transition: transform 0.2s ease; }
+.tabela-dados tr:hover .emblema-ong { transform: scale(1.08); }
+
+/* Selos de estado com leve contorno em vez de blocos planos — mais refinado. */
+.selo-estado { transition: transform 0.15s ease; }
+
+/* Notificações flash em estilo toast: entram deslizando, saem sozinhas. */
+#alertas {
+    position: fixed;
+    top: 70px; right: 16px;
+    z-index: 1080;
+    width: min(380px, calc(100vw - 32px));
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+#alertas .alert {
+    box-shadow: 0 8px 24px rgba(28,27,24,0.18);
+    animation: toast-entra 0.35s ease;
+    margin: 0 !important;
+}
+@keyframes toast-entra {
+    from { opacity: 0; transform: translateX(24px); }
+    to { opacity: 1; transform: translateX(0); }
+}
+
+/* Dropdown do sino de notificações: entrada suave. */
+.dropdown-menu { animation: toast-entra 0.18s ease; }
+
+/* Cabeçalhos de secção com pequeno traço dourado à esquerda — assinatura
+   visual consistente em todo o sistema. */
+.cartao h3, #main-content > h2, #main-content > h3 {
+    position: relative;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .cartao, .btn, .botao, .sidebar-link, .emblema-ong, #alertas .alert, .dropdown-menu {
+        transition: none !important;
+        animation: none !important;
+    }
+}
+
+
+/* ── Notícias: faixa de destaque (início) e cartões ───────────────────── */
+.hero-noticia {
+    position: relative;
+    min-height: 420px;
+    margin: -28px -28px 24px;
+    display: flex; align-items: center; justify-content: center;
+    text-align: center; color: #fff;
+    background: linear-gradient(135deg, var(--verde-escuro), var(--verde) 55%, #1d5a3d);
+    background-size: cover; background-position: center;
+    overflow: hidden;
+}
+.hero-noticia::before {
+    content: ''; position: absolute; inset: 0;
+    background: linear-gradient(180deg, rgba(8,20,12,.55) 0%, rgba(8,20,12,.62) 55%, rgba(8,20,12,.8) 100%);
+}
+.hero-noticia-corpo { position: relative; z-index: 1; max-width: 860px; padding: 3rem 1.25rem; }
+.hero-tag {
+    display: inline-block; background: #E03A2B; color: #fff;
+    font-weight: 700; letter-spacing: .06em; text-transform: uppercase;
+    font-size: .95rem; padding: .7rem 2rem; margin-bottom: 1.4rem;
+}
+.hero-noticia h1 {
+    font-family: var(--fonte-corpo); font-weight: 700; color: #fff;
+    font-size: clamp(1.9rem, 4.6vw, 3.3rem); line-height: 1.15; margin: 0 0 1.2rem;
+    hyphens: auto;
+}
+.hero-noticia h1 a { color: inherit; text-decoration: none; }
+.hero-meta { font-size: 1.05rem; color: rgba(255,255,255,.85); }
+.hero-meta strong { text-transform: uppercase; letter-spacing: .04em; color: #fff; }
+.hero-meta .sep { margin: 0 .6rem; opacity: .7; }
+.hero-resumo { max-width: 640px; margin: 1rem auto 0; color: rgba(255,255,255,.88); }
+.hero-admin { position: absolute; top: 1rem; right: 1rem; z-index: 2; }
+
+.noticia-cartao { background: #fff; border: 1px solid var(--cinza-linha); border-radius: var(--raio);
+    overflow: hidden; display: flex; flex-direction: column; height: 100%; box-shadow: var(--sombra);
+    text-decoration: none; color: inherit; transition: transform var(--transicao), box-shadow var(--transicao); }
+.noticia-cartao:hover { transform: translateY(-2px); box-shadow: 0 6px 18px rgba(28,27,24,.14); color: inherit; }
+.noticia-capa { height: 170px; background: linear-gradient(135deg, var(--verde-escuro), var(--verde-claro));
+    background-size: cover; background-position: center; position: relative; }
+.noticia-capa .hero-tag { position: absolute; left: 0; bottom: 0; margin: 0; padding: .3rem .8rem; font-size: .7rem; }
+.noticia-corpo { padding: .9rem 1rem 1.1rem; }
+.noticia-corpo h4 { font-family: var(--fonte-corpo); font-weight: 700; font-size: 1.02rem; line-height: 1.3; margin: 0 0 .4rem; }
+.noticia-meta { font-size: .78rem; color: var(--tinta-suave); }
+.artigo { max-width: 760px; margin: 0 auto; font-size: 1.05rem; line-height: 1.75; }
+.artigo p { margin-bottom: 1.1rem; }
+
+@media (max-width: 768px) {
+    .hero-noticia { margin: -16px -16px 16px; min-height: 340px; }
+}
+
+/* Faixa institucional do início */
+.hero-instituicao { font-size: .92rem; font-weight: 600; letter-spacing: .1em; text-transform: uppercase; color: rgba(255,255,255,.92); }
+.hero-instituicao--2 { font-size: .82rem; font-weight: 500; color: rgba(255,255,255,.78); margin: .25rem 0 1.6rem; }
+.hero-institucional h1 { text-transform: uppercase; letter-spacing: .01em; }
+.hero-institucional .hero-meta { font-size: 1.15rem; }
+
+/* ── Assistente (chatbot) ─────────────────────────────────────────────── */
+#chat-abrir { position: fixed; right: 20px; bottom: 20px; z-index: 1050; width: 54px; height: 54px; border-radius: 50%;
+    border: 0; background: var(--terracota); color: #fff; font-size: 1.4rem; box-shadow: 0 4px 14px rgba(0,0,0,.3); cursor: pointer; }
+#chat-abrir:hover { background: var(--terracota-escuro); }
+#chat-painel { position: fixed; right: 20px; bottom: 86px; z-index: 1050; width: 340px; max-width: calc(100vw - 24px);
+    height: 460px; max-height: calc(100vh - 110px); background: #fff; border-radius: 10px; box-shadow: 0 8px 28px rgba(0,0,0,.28);
+    display: flex; flex-direction: column; overflow: hidden; }
+#chat-painel[hidden] { display: none; }
+.chat-cabecalho { background: var(--verde); color: #fff; padding: .6rem .9rem; display: flex; justify-content: space-between; align-items: center; }
+.chat-cabecalho button { background: none; border: 0; color: #fff; font-size: 1.4rem; line-height: 1; cursor: pointer; }
+#chat-mensagens { flex: 1; overflow-y: auto; padding: .75rem; background: var(--papel); }
+.chat-msg { max-width: 88%; padding: .5rem .75rem; border-radius: 12px; margin-bottom: .5rem; font-size: .9rem; line-height: 1.4; }
+.chat-bot { background: #fff; border: 1px solid var(--cinza-linha); }
+.chat-user { background: var(--verde); color: #fff; margin-left: auto; }
+#chat-sugestoes { display: flex; flex-wrap: wrap; gap: .35rem; padding: .4rem .6rem; max-height: 110px; overflow-y: auto; border-top: 1px solid var(--cinza-linha); }
+#chat-sugestoes button { border: 1px solid var(--verde-claro); background: #fff; color: var(--verde); border-radius: 999px; padding: .2rem .65rem; font-size: .78rem; cursor: pointer; }
+#chat-sugestoes button:hover { background: var(--verde); color: #fff; }
+#chat-form { display: flex; gap: .4rem; padding: .5rem; border-top: 1px solid var(--cinza-linha); }
+#chat-form input { flex: 1; border: 1px solid var(--cinza-linha); border-radius: 6px; padding: .4rem .6rem; font-size: .9rem; }
+#chat-form button { border: 0; background: var(--verde); color: #fff; border-radius: 6px; padding: 0 .8rem; }
+@media print { #chat-abrir, #chat-painel { display: none !important; } }
+
+.paginacao { flex-wrap: wrap; }

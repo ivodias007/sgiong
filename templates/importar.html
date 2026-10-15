@@ -1,0 +1,36 @@
+{% extends "base.html" %}
+{% block titulo %}Importar Matriz{% endblock %}
+{% block topbar_titulo %}Importar Matriz{% endblock %}
+
+{% block conteudo %}
+
+<section class="banner-pagina">
+  <div class="rotulo">Pipeline de dados</div>
+  <h1>Importar matriz de ONGs</h1>
+  <p>Excel → validação → pré-visualização → confirmação — nada é gravado antes de rever o resultado.</p>
+</section>
+
+<div class="alert alert-info">
+  <i class="bi bi-info-circle"></i>
+  Funciona com matrizes no <strong>layout padrão</strong> (coluna "Designação da Organização" —
+  é o caso da maioria das províncias). Para os layouts especiais mais antigos (Niassa, Sofala,
+  Zambézia, Maputo Província no formato original), continue a usar o pipeline por linha de
+  comandos (<code>importar_matrizes_2026.py</code>), documentado no README.
+</div>
+
+<div class="cartao" style="max-width:560px;">
+  <h3><i class="bi bi-file-earmark-excel"></i> Escolha o ficheiro</h3>
+  <form method="post" action="{{ url_for('importar_pre_visualizar') }}" enctype="multipart/form-data">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+    <div class="campo-formulario mb-3">
+      <label for="ficheiro">Ficheiro Excel (.xlsx)</label>
+      <input type="file" class="form-control" id="ficheiro" name="ficheiro" accept=".xlsx,.xlsm" required>
+      {% if session.get('provincia') %}
+      <div class="form-text">Só serão aceites registos da sua província ({{ session.get('provincia') }}) — os restantes ficam marcados como erro.</div>
+      {% endif %}
+    </div>
+    <button type="submit" class="btn btn-primary"><i class="bi bi-eye"></i> Analisar e pré-visualizar</button>
+  </form>
+</div>
+
+{% endblock %}

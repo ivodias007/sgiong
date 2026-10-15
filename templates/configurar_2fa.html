@@ -1,0 +1,47 @@
+{% extends "base.html" %}
+{% block titulo %}Configurar 2FA{% endblock %}
+{% block topbar_titulo %}Configurar verificação em duas etapas{% endblock %}
+
+{% block conteudo %}
+
+<section class="banner-pagina">
+  <div class="rotulo">A minha conta</div>
+  <h1>Configurar verificação em duas etapas</h1>
+  <p>Use o Google Authenticator, Authy, ou outra aplicação compatível com TOTP.</p>
+</section>
+
+<div class="row g-3">
+  <div class="col-md-5">
+    <div class="cartao text-center">
+      <h3>1. Digitalize o código</h3>
+      <img src="{{ url_for('qrcode_2fa') }}" alt="QR code para configurar o 2FA" style="max-width:220px; margin:0 auto;">
+      <p style="font-size:0.8rem; color:var(--tinta-suave); margin-top:0.75rem;">
+        Não consegue digitalizar? Introduza esta chave manualmente na aplicação:
+      </p>
+      <code style="word-break:break-all; font-size:0.85rem;">{{ segredo }}</code>
+    </div>
+  </div>
+
+  <div class="col-md-7">
+    <div class="cartao">
+      <h3>2. Confirme com um código</h3>
+      <p style="font-size:0.88rem; color:var(--tinta-suave);">
+        Introduza o código de 6 dígitos que a aplicação está a mostrar agora, para confirmar que
+        ficou tudo bem configurado antes de activarmos.
+      </p>
+      <form method="post" action="{{ url_for('activar_2fa') }}">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+        <div class="campo-formulario mb-3">
+          <label for="codigo">Código actual</label>
+          <input type="text" class="form-control" id="codigo" name="codigo" required
+                 inputmode="numeric" pattern="[0-9]{6}" maxlength="6" autocomplete="one-time-code"
+                 style="letter-spacing:0.4em; font-size:1.3rem; max-width:200px;">
+        </div>
+        <button type="submit" class="btn btn-primary">Activar 2FA</button>
+        <a href="{{ url_for('conta') }}" class="btn btn-outline-secondary">Cancelar</a>
+      </form>
+    </div>
+  </div>
+</div>
+
+{% endblock %}

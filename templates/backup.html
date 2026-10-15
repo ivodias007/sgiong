@@ -1,0 +1,58 @@
+{% extends "base.html" %}
+{% block titulo %}Backups{% endblock %}
+{% block topbar_titulo %}Backups{% endblock %}
+
+{% block conteudo %}
+
+<section class="banner-pagina">
+  <div class="rotulo">Super Administrador</div>
+  <h1>Backups da base de dados</h1>
+  <p>Backup diário automático às 02:00, mantendo sempre os últimos {{ retencao }}.</p>
+</section>
+
+<div class="alert alert-warning">
+  <i class="bi bi-exclamation-triangle"></i>
+  <strong>Importante se estiver no plano gratuito do Render:</strong> o disco não é persistente
+  entre deploys — estes backups protegem contra erros durante a sessão em curso, mas não
+  substituem descarregar periodicamente uma cópia para fora do servidor. Use o botão
+  "Descarregar" regularmente, especialmente antes de fazer alterações grandes (ex.: importar
+  novas matrizes).
+</div>
+
+<div class="d-flex justify-content-between align-items-center mb-3">
+  <span class="contador-resultados mb-0">{{ backups | length }} backup(s) guardado(s)</span>
+  <form method="post" action="{{ url_for('backup_executar') }}">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+    <button type="submit" class="btn btn-primary btn-sm"><i class="bi bi-cloud-arrow-down"></i> Fazer backup agora</button>
+  </form>
+</div>
+
+<table class="tabela-dados">
+  <thead>
+    <tr><th>Ficheiro</th><th>Criado em</th><th>Tamanho</th><th>Acções</th></tr>
+  </thead>
+  <tbody>
+    {% for b in backups %}
+    <tr>
+      <td><code>{{ b.nome }}</code></td>
+      <td>{{ b.criado_em }}</td>
+      <td>{{ b.tamanho_kb }} KB</td>
+      <td>
+        <a href="{{ url_for('backup_descarregar', nome_ficheiro=b.nome) }}" class="btn btn-sm btn-outline-secondary">
+          <i class="bi bi-download"></i> Descarregar
+        </a>
+        <form method="post" action="{{ url_for('backup_restaurar', nome_ficheiro=b.nome) }}" class="d-inline-flex gap-1 ms-1"
+              onsubmit="return confirm('Substituir a base de dados actual por este backup? O estado actual fica guardado antes (pre_restauro).');">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+          <input type="text" name="confirmacao" class="form-control form-control-sm" style="width:7.5rem" placeholder="RESTAURAR" autocomplete="off">
+          <button class="btn btn-sm btn-outline-danger" type="submit"><i class="bi bi-arrow-counterclockwise"></i> Restaurar</button>
+        </form>
+      </td>
+    </tr>
+    {% else %}
+    <tr><td colspan="4" style="text-align:center; color:var(--tinta-suave); padding:2rem;">Ainda não há backups.</td></tr>
+    {% endfor %}
+  </tbody>
+</table>
+
+{% endblock %}

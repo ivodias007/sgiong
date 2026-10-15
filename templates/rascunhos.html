@@ -1,0 +1,40 @@
+{% extends "base.html" %}
+{% block titulo %}Rascunhos{% endblock %}
+{% block topbar_titulo %}Os meus rascunhos{% endblock %}
+
+{% block conteudo %}
+
+<section class="banner-pagina">
+  <div class="rotulo">Trabalho em curso</div>
+  <h1>Rascunhos</h1>
+  <p>Registos guardados mas ainda não submetidos — só visíveis para si{% if session.get('nivel') == 'superadmin' %} (o Super Admin vê os de todos){% endif %}.</p>
+</section>
+
+<div class="contador-resultados">{{ rascunhos | length }} rascunho(s)</div>
+
+<table class="tabela-dados">
+  <thead>
+    <tr><th>Nome</th><th>Criado por</th><th>Última actualização</th><th></th></tr>
+  </thead>
+  <tbody>
+    {% for r in rascunhos %}
+    <tr>
+      <td>{{ r.nome or '(sem nome)' }}</td>
+      <td>{{ r.criado_por }}</td>
+      <td>{{ r.criado_em }}</td>
+      <td class="d-flex gap-2">
+        <a href="{{ url_for('editar', ong_id=r.id) }}" class="btn btn-sm btn-primary">Continuar</a>
+        <form method="post" action="{{ url_for('eliminar_rascunho', ong_id=r.id) }}"
+              onsubmit="return confirm('Eliminar este rascunho? Não pode ser desfeito.');">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+          <button type="submit" class="btn btn-sm btn-outline-danger">Eliminar</button>
+        </form>
+      </td>
+    </tr>
+    {% else %}
+    <tr><td colspan="4" style="text-align:center; color:var(--tinta-suave); padding:2rem;">Sem rascunhos.</td></tr>
+    {% endfor %}
+  </tbody>
+</table>
+
+{% endblock %}

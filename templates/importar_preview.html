@@ -1,0 +1,105 @@
+{% extends "base.html" %}
+{% block titulo %}Pré-visualização da Importação{% endblock %}
+{% block topbar_titulo %}Pré-visualização — {{ nome_ficheiro }}{% endblock %}
+
+{% block conteudo %}
+
+<section class="banner-pagina">
+  <div class="rotulo">Antes de gravar</div>
+  <h1>Pré-visualização de "{{ nome_ficheiro }}"</h1>
+  <p>Reveja o resultado antes de confirmar — nada foi gravado ainda.</p>
+</section>
+
+<div class="faixa-estatisticas">
+  <div class="estatistica">
+    <span class="numero">{{ resumo.total }}</span>
+    <span class="rotulo">Linhas encontradas</span>
+  </div>
+  <div class="estatistica">
+    <span class="numero">{{ resumo.valido }}</span>
+    <span class="rotulo">Válidas</span>
+  </div>
+  <div class="estatistica">
+    <span class="numero">{{ resumo.duplicado_provavel }}</span>
+    <span class="rotulo">Possíveis duplicados</span>
+  </div>
+  <div class="estatistica">
+    <span class="numero">{{ resumo.duplicado_exato }}</span>
+    <span class="rotulo">Já existem</span>
+  </div>
+  <div class="estatistica">
+    <span class="numero">{{ resumo.erro }}</span>
+    <span class="rotulo">Com erros</span>
+  </div>
+</div>
+
+<form method="post" action="{{ url_for('importar_confirmar', token=token) }}">
+  <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+
+  <div class="d-flex justify-content-between align-items-center mb-2">
+    <div class="form-check">
+      <input class="form-check-input" type="checkbox" id="marcarTodasValidas" checked>
+      <label class="form-check-label" for="marcarTodasValidas" style="font-size:0.88rem;">
+        Seleccionar todas as válidas
+      </label>
+    </div>
+    <div class="d-flex gap-2">
+      <button type="submit" class="btn btn-primary btn-sm">
+        <i class="bi bi-cloud-arrow-up"></i> Confirmar importação dos seleccionados
+      </button>
+      <button type="submit" formaction="{{ url_for('importar_cancelar', token=token) }}" class="btn btn-outline-secondary btn-sm">
+        Cancelar
+      </button>
+    </div>
+  </div>
+
+  <table class="tabela-dados">
+    <thead>
+      <tr>
+        <th></th>
+        <th>Nome</th>
+        <th>Província</th>
+        <th>Natureza</th>
+        <th>Estado</th>
+        <th>Motivo</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for r in registos %}
+      <tr>
+        <td>
+          {% if r.status != 'erro' %}
+          <input type="checkbox" name="incluir" value="{{ loop.index0 }}" class="caixa-incluir"
+                 {{ 'checked' if r.status == 'valido' }}>
+          {% else %}
+          <input type="checkbox" disabled title="Não pode ser importado — corrija o ficheiro de origem">
+          {% endif %}
+        </td>
+        <td>{{ r.nome }}</td>
+        <td>{{ r.provincia or '—' }}</td>
+        <td>{{ r.natureza or '—' }}</td>
+        <td>
+          {% if r.status == 'valido' %}
+            <span class="selo-estado selo-estado--aprovado">Válido</span>
+          {% elif r.status == 'duplicado_provavel' %}
+            <span class="selo-estado selo-estado--pendente">Possível duplicado</span>
+          {% elif r.status == 'duplicado_exato' %}
+            <span class="badge bg-secondary">Já existe</span>
+          {% else %}
+            <span class="selo-estado selo-estado--rejeitado">Erro</span>
+          {% endif %}
+        </td>
+        <td style="font-size:0.82rem; color:var(--tinta-suave);">{{ r.motivos | join('; ') }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</form>
+
+<script>
+  document.getElementById('marcarTodasValidas').addEventListener('change', function() {
+    document.querySelectorAll('.caixa-incluir').forEach(cx => { cx.checked = this.checked; });
+  });
+</script>
+
+{% endblock %}

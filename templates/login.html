@@ -1,0 +1,34 @@
+{% extends "base.html" %}
+{% block titulo %}Entrar{% endblock %}
+{% block topbar_titulo %}Entrar no sistema{% endblock %}
+
+{% block conteudo %}
+<div class="pagina-auth">
+  <div class="cartao-auth">
+    <h1 style="font-size:1.4rem; margin-bottom:0.2rem;">Entrar no sistema</h1>
+    <p style="color:var(--tinta-suave); font-size:0.88rem; margin-bottom:1.5rem;">
+      SGIONGs — acesso restrito a administradores
+    </p>
+
+    <form method="post" action="{{ url_for('login', next=next) }}">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+      <input type="hidden" name="next" value="{{ next }}">
+
+      <div class="campo-formulario mb-3">
+        <label for="utilizador">E-mail</label>
+        <input type="text" class="form-control" id="utilizador" name="utilizador" required autofocus autocomplete="username" placeholder="o.seu.nome@dominio.gov.mz">
+      </div>
+
+      <div class="campo-formulario mb-3">
+        <label for="senha">Palavra-passe</label>
+        <input type="password" class="form-control" id="senha" name="senha" required autocomplete="current-password">
+      </div>
+
+      <button type="submit" class="btn btn-primary w-100">Entrar</button>
+    </form>
+    {% if recuperacao_email_activa %}
+    <div class="text-center mt-3"><a href="{{ url_for('recuperar_senha') }}" style="font-size:0.85rem;">Esqueci a minha senha</a></div>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

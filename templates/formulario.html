@@ -1,0 +1,318 @@
+{% extends "base.html" %}
+{% block titulo %}{{ 'Editar ONG' if ong else 'Registar ONG' }}{% endblock %}
+{% block topbar_titulo %}{{ 'Editar ' + ong.nome if ong else 'Registar nova ONG' }}{% endblock %}
+
+{% block cabecalho_extra %}
+<style>
+  .painel-distritos { border:1px solid var(--cinza-linha); border-radius:6px; background:#fff; }
+  .painel-distritos-topo { display:flex; gap:.75rem; align-items:center; padding:.5rem; border-bottom:1px solid var(--cinza-linha); position:sticky; top:0; background:#fff; }
+  .painel-distritos-topo input { flex:1; }
+  #grupos-distritos { max-height:340px; overflow-y:auto; }
+  .grupo-distritos-cab { display:flex; justify-content:space-between; padding:.35rem .6rem; background:#f1efe8; font-size:.85rem; position:sticky; top:0; }
+  .grupo-distritos-corpo { display:grid; grid-template-columns:repeat(auto-fill,minmax(190px,1fr)); gap:.15rem .75rem; padding:.5rem .75rem; }
+  .item-distrito { font-size:.88rem; cursor:pointer; }
+</style>
+{% endblock %}
+
+{% block conteudo %}
+
+<section class="banner-pagina">
+  <div class="rotulo">{{ 'Rascunho' if ong and ong.rascunho else ('Edição' if ong else 'Novo registo') }}</div>
+  <h1>{{ 'Editar ' + ong.nome if ong else 'Registar nova ONG' }}</h1>
+  {% if ong and ong.rascunho %}
+  <p>Este rascunho só é visível para si. Guarde para continuar mais tarde, ou submeta para entrar no fluxo de aprovação.</p>
+  {% elif ong and session.get('nivel') != 'superadmin' %}
+  <p>As alterações serão submetidas para aprovação do Super Administrador antes de entrarem em vigor.</p>
+  {% endif %}
+</section>
+
+<form method="post"
+      action="{{ url_for('editar', ong_id=ong.id) if ong else url_for('novo') }}"
+      enctype="multipart/form-data"
+      class="cartao" style="max-width: 720px;">
+  <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+
+  <div class="row g-3">
+    <div class="col-md-8 campo-formulario">
+      <label for="nome">Nome completo *</label>
+      <input type="text" class="form-control" id="nome" name="nome" required value="{{ ong.nome if ong else '' }}">
+      <div id="avisoDuplicados" style="display:none;" class="alert alert-warning mt-2 mb-0"></div>
+    </div>
+    <div class="col-md-4 campo-formulario">
+      <label for="sigla">Sigla</label>
+      <input type="text" class="form-control" id="sigla" name="sigla" value="{{ ong.sigla if ong else '' }}">
+    </div>
+
+    <div class="col-md-4 campo-formulario">
+      <label for="natureza">Natureza</label>
+      <select class="form-select" id="natureza" name="natureza">
+        <option value="">Seleccione...</option>
+        {% for opcao in ['ONG', 'OSC', 'Fundação'] %}
+        <option value="{{ opcao }}" {{ 'selected' if ong and ong.natureza == opcao }}>{{ opcao }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="col-md-4 campo-formulario">
+      <label for="origem">Origem</label>
+      <select class="form-select" id="origem" name="origem">
+        <option value="">Seleccione...</option>
+        <option value="Nacional" {{ 'selected' if ong and ong.origem == 'Nacional' }}>Nacional</option>
+        <option value="Estrangeira" {{ 'selected' if ong and ong.origem == 'Estrangeira' }}>Estrangeira</option>
+      </select>
+    </div>
+    <div class="col-md-4 campo-formulario" id="campo-ano-entrada">
+      <label for="ano_entrada_pais">Ano de entrada no país</label>
+      <input type="number" class="form-control" id="ano_entrada_pais" name="ano_entrada_pais" min="1900" max="2100"
+             value="{{ ong.ano_entrada_pais if ong and ong.ano_entrada_pais else '' }}">
+    </div>
+
+    <div class="col-12 campo-formulario">
+      <label for="provincias">Província(s) de actuação</label>
+      <select class="form-select" id="provincias" name="provincias" multiple size="6">
+        {% for p in provincias %}
+        <option value="{{ p }}" {{ 'selected' if p in provincias_ong }}>{{ p }}</option>
+        {% endfor %}
+      </select>
+      <div class="form-text">Segure Ctrl (ou Cmd no Mac) para seleccionar várias.</div>
+    </div>
+
+    <div class="col-12 campo-formulario">
+      <label>Distrito(s) de actuação</label>
+      <div id="painel-distritos" class="painel-distritos">
+        <div class="painel-distritos-topo">
+          <input type="search" class="form-control form-control-sm" id="filtro-distritos"
+                 placeholder="Filtrar distritos pelo nome..." autocomplete="off">
+          <span class="form-text mb-0" id="contador-distritos">0 seleccionados</span>
+        </div>
+        <div id="grupos-distritos"></div>
+        <p id="sem-provincia" class="form-text mb-0 p-2">Seleccione primeiro uma ou mais províncias para escolher os distritos.</p>
+      </div>
+      <div class="form-text">Aparecem os distritos de cada província seleccionada, agrupados por província. Todos os campos, excepto o nome, são opcionais.</div>
+    </div>
+
+    <div class="col-12 campo-formulario">
+      <label for="area_intervencao">Área/s Temática/s</label>
+      <textarea class="form-control" id="area_intervencao" name="area_intervencao" rows="2">{{ ong.area_intervencao if ong else '' }}</textarea>
+    </div>
+
+    <div class="col-12 campo-formulario">
+      <label for="programas">Programas</label>
+      <textarea class="form-control" id="programas" name="programas" rows="2">{{ ong.programas if ong else '' }}</textarea>
+    </div>
+    <div class="col-12 campo-formulario">
+      <label for="projetos_em_curso">Projectos em curso</label>
+      <textarea class="form-control" id="projetos_em_curso" name="projetos_em_curso" rows="2">{{ ong.projetos_em_curso if ong else '' }}</textarea>
+    </div>
+    <div class="col-md-6 campo-formulario">
+      <label for="fonte_financiamento">Fonte de financiamento</label>
+      <input type="text" class="form-control" id="fonte_financiamento" name="fonte_financiamento" value="{{ ong.fonte_financiamento if ong else '' }}">
+    </div>
+    <div class="col-md-6 campo-formulario">
+      <label for="perfil_grupo_alvo">Perfil do grupo alvo</label>
+      <input type="text" class="form-control" id="perfil_grupo_alvo" name="perfil_grupo_alvo" value="{{ ong.perfil_grupo_alvo if ong else '' }}">
+    </div>
+
+    <div class="col-md-4 campo-formulario">
+      <label for="pessoa_contacto">Ponto focal</label>
+      <input type="text" class="form-control" id="pessoa_contacto" name="pessoa_contacto" value="{{ ong.pessoa_contacto if ong else '' }}">
+    </div>
+    <div class="col-md-4 campo-formulario">
+      <label for="telefone">Telefone</label>
+      <input type="text" class="form-control" id="telefone" name="telefone" value="{{ ong.telefone if ong else '' }}">
+    </div>
+    <div class="col-md-4 campo-formulario">
+      <label for="email">E-mail</label>
+      <input type="email" class="form-control" id="email" name="email" value="{{ ong.email if ong else '' }}">
+    </div>
+
+    <div class="col-md-6 campo-formulario">
+      <label for="logo">Logótipo</label>
+      {% if ong and ong.logo_url %}
+      <div class="d-flex align-items-center gap-2 mb-2">
+        <img src="{{ ong.logo_url }}" alt="Logótipo actual" style="height:48px; width:48px; object-fit:contain; border:1px solid var(--cinza-linha); border-radius:4px; padding:2px; background:#fff;">
+        <span class="form-text mb-0">Logótipo actual — envie um ficheiro novo só se quiser substituí-lo.</span>
+      </div>
+      {% endif %}
+      <input type="file" class="form-control" id="logo" name="logo" accept=".png,.jpg,.jpeg,.svg,.webp,image/*">
+      <div class="form-text">PNG, JPG, SVG ou WEBP, até 2 MB.</div>
+    </div>
+    <div class="col-md-3 campo-formulario">
+      <label for="coordenada_x">Coordenada X</label>
+      <input type="text" class="form-control" id="coordenada_x" name="coordenada_x" value="{{ ong.coordenada_x if ong else '' }}">
+    </div>
+    <div class="col-md-3 campo-formulario">
+      <label for="coordenada_y">Coordenada Y</label>
+      <input type="text" class="form-control" id="coordenada_y" name="coordenada_y" value="{{ ong.coordenada_y if ong else '' }}">
+    </div>
+
+    {% if session.get('nivel') == 'superadmin' %}
+    <div class="col-md-4 campo-formulario">
+      <label for="estado">Estado</label>
+      <select class="form-select" id="estado" name="estado">
+        <option value="Ativo" {{ 'selected' if not ong or ong.estado == 'Ativo' }}>Ativo</option>
+        <option value="Inativo" {{ 'selected' if ong and ong.estado == 'Inativo' }}>Inativo</option>
+      </select>
+    </div>
+    {% endif %}
+  </div>
+
+  <div class="d-flex gap-2 mt-4">
+    <button type="submit" name="acao" value="submeter" class="btn btn-primary">{{ 'Submeter alterações' if ong and not ong.rascunho else ('Submeter registo' if ong and ong.rascunho else 'Registar') }}</button>
+    {% if not ong or ong.rascunho %}
+    <button type="submit" name="acao" value="rascunho" class="btn btn-outline-secondary">
+      <i class="bi bi-file-earmark-text"></i> Guardar como rascunho
+    </button>
+    {% endif %}
+    <a href="{{ url_for('detalhe', ong_id=ong.id) if ong and not ong.rascunho else url_for('index') }}" class="btn btn-outline-secondary ms-auto">Cancelar</a>
+  </div>
+</form>
+
+<script>
+  const distritosPorProvincia = {{ distritos_por_provincia_json | tojson }};
+  const distritosSeleccionados = new Set({{ (distritos_ong or []) | tojson }});
+  const selectProvincias = document.getElementById('provincias');
+  const gruposDistritos = document.getElementById('grupos-distritos');
+  const filtroDistritos = document.getElementById('filtro-distritos');
+  const contadorDistritos = document.getElementById('contador-distritos');
+  const semProvincia = document.getElementById('sem-provincia');
+  const selectOrigem = document.getElementById('origem');
+  const campoAnoEntrada = document.getElementById('campo-ano-entrada');
+
+  function actualizarContador() {
+    contadorDistritos.textContent = distritosSeleccionados.size + ' seleccionado(s)';
+  }
+
+  function aplicarFiltroDistritos() {
+    const termo = filtroDistritos.value.trim().toLowerCase();
+    gruposDistritos.querySelectorAll('.grupo-distritos').forEach(g => {
+      let visiveis = 0;
+      g.querySelectorAll('label.item-distrito').forEach(l => {
+        const mostra = !termo || l.dataset.nome.toLowerCase().includes(termo);
+        l.style.display = mostra ? '' : 'none';
+        if (mostra) visiveis++;
+      });
+      g.style.display = visiveis ? '' : 'none';
+    });
+  }
+
+  function actualizarListaDistritos() {
+    const seleccionadas = Array.from(selectProvincias.selectedOptions).map(o => o.value);
+    const validos = new Set(seleccionadas.flatMap(p => distritosPorProvincia[p] || []));
+    // remove distritos de províncias que deixaram de estar seleccionadas
+    Array.from(distritosSeleccionados).forEach(d => { if (!validos.has(d)) distritosSeleccionados.delete(d); });
+    gruposDistritos.innerHTML = '';
+    semProvincia.style.display = seleccionadas.length ? 'none' : 'block';
+    seleccionadas.forEach(p => {
+      const lista = distritosPorProvincia[p] || [];
+      const grupo = document.createElement('div');
+      grupo.className = 'grupo-distritos';
+      const cab = document.createElement('div');
+      cab.className = 'grupo-distritos-cab';
+      cab.innerHTML = '<strong></strong><span><a href="#" data-acao="todos">todos</a> · <a href="#" data-acao="nenhum">nenhum</a></span>';
+      cab.querySelector('strong').textContent = p + ' (' + lista.length + ')';
+      cab.addEventListener('click', ev => {
+        const acao = ev.target.dataset && ev.target.dataset.acao;
+        if (!acao) return;
+        ev.preventDefault();
+        grupo.querySelectorAll('label.item-distrito').forEach(l => {
+          if (l.style.display === 'none') return;
+          const cb = l.querySelector('input');
+          cb.checked = acao === 'todos';
+          if (cb.checked) distritosSeleccionados.add(cb.value); else distritosSeleccionados.delete(cb.value);
+        });
+        actualizarContador();
+      });
+      grupo.appendChild(cab);
+      const corpo = document.createElement('div');
+      corpo.className = 'grupo-distritos-corpo';
+      lista.forEach(d => {
+        const l = document.createElement('label');
+        l.className = 'item-distrito';
+        l.dataset.nome = d;
+        const cb = document.createElement('input');
+        cb.type = 'checkbox'; cb.name = 'distritos'; cb.value = d;
+        cb.checked = distritosSeleccionados.has(d);
+        cb.addEventListener('change', () => {
+          if (cb.checked) distritosSeleccionados.add(d); else distritosSeleccionados.delete(d);
+          actualizarContador();
+        });
+        l.appendChild(cb);
+        l.appendChild(document.createTextNode(' ' + d));
+        corpo.appendChild(l);
+      });
+      grupo.appendChild(corpo);
+      gruposDistritos.appendChild(grupo);
+    });
+    actualizarContador();
+    aplicarFiltroDistritos();
+  }
+  filtroDistritos.addEventListener('input', aplicarFiltroDistritos);
+  filtroDistritos.addEventListener('keydown', e => { if (e.key === 'Enter') e.preventDefault(); });
+  function actualizarCampoAno() {
+    campoAnoEntrada.style.display = selectOrigem.value === 'Estrangeira' ? 'block' : 'none';
+  }
+  selectProvincias.addEventListener('change', actualizarListaDistritos);
+  selectOrigem.addEventListener('change', actualizarCampoAno);
+  actualizarListaDistritos();
+  actualizarCampoAno();
+
+  // ------------------------------------------------------------------
+  // Aviso de possível duplicado — consulta /ong/verificar-duplicados
+  // enquanto a pessoa escreve (com debounce), antes mesmo de submeter.
+  // ------------------------------------------------------------------
+  const avisoDuplicados = document.getElementById('avisoDuplicados');
+  const camposVerificados = ['nome', 'sigla', 'telefone', 'email'].map(id => document.getElementById(id)).filter(Boolean);
+  let temporizador = null;
+
+  function verificarDuplicados() {
+    const nome = document.getElementById('nome').value.trim();
+    if (nome.length < 4) {
+      avisoDuplicados.style.display = 'none';
+      return;
+    }
+    const dados = new FormData();
+    dados.append('csrf_token', '{{ csrf_token }}');
+    dados.append('nome', nome);
+    dados.append('sigla', document.getElementById('sigla').value);
+    dados.append('telefone', document.getElementById('telefone').value);
+    dados.append('email', document.getElementById('email').value);
+    {% if ong %}dados.append('excluir_id', '{{ ong.id }}');{% endif %}
+
+    fetch("{{ url_for('verificar_duplicados') }}", { method: 'POST', body: dados })
+      .then(r => r.json())
+      .then(resp => {
+        const botoes = document.querySelectorAll('form.cartao button[type=submit]');
+        const resultados = resp.parecidos || [];
+        if (resp.exacto) {
+          avisoDuplicados.className = 'alert alert-danger mt-2 mb-0';
+          avisoDuplicados.innerHTML = '<i class="bi bi-x-octagon"></i> <strong>Já existe uma ONG com este nome:</strong> ' +
+            `<a href="/ong/${resp.exacto.id}" target="_blank">${resp.exacto.nome}</a>. Não é possível registar duas ONGs com o mesmo nome.`;
+          avisoDuplicados.style.display = 'block';
+          botoes.forEach(b => b.disabled = true);
+          return;
+        }
+        botoes.forEach(b => b.disabled = false);
+        avisoDuplicados.className = 'alert alert-warning mt-2 mb-0';
+        if (!resultados.length) {
+          avisoDuplicados.style.display = 'none';
+          return;
+        }
+        const lista = resultados.map(r =>
+          `<a href="/ong/${r.id}" target="_blank">${r.nome}</a> — <strong>${r.pontuacao}%</strong> (${r.motivos.join(', ')})`
+        ).join('<br>');
+        avisoDuplicados.innerHTML = '<i class="bi bi-exclamation-triangle"></i> <strong>Possível duplicado:</strong><br>' + lista;
+        avisoDuplicados.style.display = 'block';
+      })
+      .catch(() => { avisoDuplicados.style.display = 'none'; });
+  }
+
+  camposVerificados.forEach(campo => {
+    campo.addEventListener('input', () => {
+      clearTimeout(temporizador);
+      temporizador = setTimeout(verificarDuplicados, 500);
+    });
+  });
+  if (document.getElementById('nome').value.trim().length >= 4) verificarDuplicados();
+</script>
+
+{% endblock %}

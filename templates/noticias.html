@@ -1,0 +1,48 @@
+{% extends "base.html" %}
+{% block titulo %}Notícias{% endblock %}
+{% block topbar_titulo %}Notícias{% endblock %}
+
+{% block conteudo %}
+<section class="banner-pagina">
+  <div class="rotulo">Sociedade civil em Moçambique</div>
+  <h1>Notícias</h1>
+  <p>Novidades sobre as ONGs, o desenvolvimento e o próprio sistema.</p>
+</section>
+
+<div class="d-flex flex-wrap gap-2 mb-3 align-items-center">
+  <a href="{{ url_for('noticias_lista') }}" class="btn btn-sm {{ 'btn-primary' if not categoria else 'btn-outline-secondary' }}">Todas</a>
+  {% for c in categorias %}
+  <a href="{{ url_for('noticias_lista', categoria=c) }}" class="btn btn-sm {{ 'btn-primary' if categoria == c else 'btn-outline-secondary' }}">{{ c }}</a>
+  {% endfor %}
+  {% if pode_gerir_noticias %}
+  <a href="{{ url_for('noticias_admin') }}" class="btn btn-sm btn-outline-success ms-auto"><i class="bi bi-gear"></i> Gerir notícias</a>
+  {% endif %}
+</div>
+
+<div class="row g-3">
+  {% for n in noticias %}
+  <div class="col-md-6 col-lg-4">
+    <a class="noticia-cartao" href="{{ url_for('noticia_detalhe', noticia_id=n.id) }}">
+      <div class="noticia-capa" {% if n.imagem_url %}style="background-image:url('{{ n.imagem_url }}')"{% endif %}>
+        <span class="hero-tag">{{ n.categoria }}</span>
+      </div>
+      <div class="noticia-corpo">
+        <h4>{{ n.titulo }}</h4>
+        {% if n.resumo %}<p style="font-size:.88rem; margin:0 0 .5rem;">{{ n.resumo }}</p>{% endif %}
+        <div class="noticia-meta">{{ n.autor or '' }}{% if n.autor %} · {% endif %}{{ n.publicado_em | data_extenso }}</div>
+      </div>
+    </a>
+  </div>
+  {% else %}
+  <p class="text-muted">Ainda não há notícias publicadas.</p>
+  {% endfor %}
+</div>
+
+{% if total_paginas > 1 %}
+<nav class="d-flex justify-content-center gap-2 mt-4">
+  {% for i in range(1, total_paginas + 1) %}
+  <a class="btn btn-sm {{ 'btn-primary' if i == pagina else 'btn-outline-secondary' }}" href="{{ url_for('noticias_lista', p=i, categoria=categoria or None) }}">{{ i }}</a>
+  {% endfor %}
+</nav>
+{% endif %}
+{% endblock %}

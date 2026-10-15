@@ -1,0 +1,60 @@
+{% extends "base.html" %}
+{% block titulo %}Gerir notícias{% endblock %}
+{% block topbar_titulo %}Gestão de notícias{% endblock %}
+
+{% block conteudo %}
+<section class="banner-pagina">
+  <div class="rotulo">Administração</div>
+  <h1>Gestão de notícias</h1>
+  <p>Crie, edite, publique ou retire notícias da página inicial.</p>
+</section>
+
+<form method="post" action="{{ url_for('capa_inicio_guardar') }}" enctype="multipart/form-data" class="cartao mb-3">
+  <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+  <h3>Imagem de capa da página inicial</h3>
+  <div class="d-flex flex-wrap align-items-center gap-3">
+    {% if capa_url %}<img src="{{ capa_url }}" alt="" style="height:64px; border-radius:4px;">{% endif %}
+    <input type="file" name="imagem" class="form-control" style="max-width:340px;" accept=".jpg,.jpeg,.png,.webp,image/*">
+    <button class="btn btn-primary btn-sm" type="submit">Guardar imagem</button>
+    {% if capa_url %}<button class="btn btn-outline-danger btn-sm" type="submit" name="remover" value="1">Remover</button>{% endif %}
+  </div>
+  <div class="form-text">Sem imagem enviada, usa-se a ilustração padrão do sistema. Foto larga (ex.: 1600×900), <strong>sem texto</strong> — o nome do Ministério, o título e a data são escritos por cima automaticamente. JPG, PNG ou WEBP, até 5 MB.</div>
+</form>
+
+<div class="mb-3 d-flex gap-2">
+  <a href="{{ url_for('noticia_nova') }}" class="btn btn-primary"><i class="bi bi-plus-circle"></i> Nova notícia</a>
+  <a href="{{ url_for('noticias_lista') }}" class="btn btn-outline-secondary">Ver no site</a>
+</div>
+
+<div class="cartao" style="overflow-x:auto;">
+<table class="tabela-dados">
+  <thead><tr><th>Título</th><th>Categoria</th><th>Data</th><th>Estado</th><th class="text-end">Acções</th></tr></thead>
+  <tbody>
+    {% for n in noticias %}
+    <tr>
+      <td><a href="{{ url_for('noticia_detalhe', noticia_id=n.id) }}">{{ n.titulo }}</a>
+          {% if n.destaque %}<span class="badge bg-danger ms-1">Destaque</span>{% endif %}</td>
+      <td>{{ n.categoria }}</td>
+      <td>{{ n.publicado_em | data_extenso }}</td>
+      <td>{% if n.publicada %}<span class="selo-estado selo-estado--aprovado">Publicada</span>{% else %}<span class="selo-estado selo-estado--pendente">Rascunho</span>{% endif %}</td>
+      <td class="text-end">
+        <a class="btn btn-sm btn-outline-secondary" href="{{ url_for('noticia_editar', noticia_id=n.id) }}"><i class="bi bi-pencil"></i></a>
+        <form method="post" action="{{ url_for('noticia_publicar', noticia_id=n.id) }}" class="d-inline">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+          <button class="btn btn-sm btn-outline-secondary" title="{{ 'Retirar do site' if n.publicada else 'Publicar' }}">
+            <i class="bi {{ 'bi-eye-slash' if n.publicada else 'bi-eye' }}"></i></button>
+        </form>
+        <form method="post" action="{{ url_for('noticia_eliminar', noticia_id=n.id) }}" class="d-inline"
+              onsubmit="return confirm('Eliminar esta notícia? Esta acção não pode ser desfeita.');">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+          <button class="btn btn-sm btn-outline-danger"><i class="bi bi-trash"></i></button>
+        </form>
+      </td>
+    </tr>
+    {% else %}
+    <tr><td colspan="5" class="text-muted">Ainda não há notícias. Clique em "Nova notícia".</td></tr>
+    {% endfor %}
+  </tbody>
+</table>
+</div>
+{% endblock %}

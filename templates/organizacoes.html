@@ -1,0 +1,163 @@
+{% extends 'base.html' %}
+{% block titulo %}SGIONGs - Organizações{% endblock %}
+
+{% block conteudo %}
+<h4 class="mb-1">Organizações (visão consolidada)</h4>
+<p class="text-muted small mb-3">
+    Cada organização aparece <strong>uma única vez</strong>, com todas as províncias, distritos e
+    áreas temáticas onde tem atividade registada — mesmo que a matriz de origem tenha várias linhas
+    para a mesma ONG.
+</p>
+
+<form method="get" class="card card-body bg-light mb-4">
+    <div class="row g-2">
+        <div class="col-md-2">
+            <label class="form-label small">Pesquisar por nome</label>
+            <input type="text" name="q" value="{{ filtros.q }}" class="form-control"
+                   placeholder="Ex: UNICEF, PMA, FDC...">
+        </div>
+        <div class="col-md-2">
+            <label class="form-label small">Província</label>
+            <select name="provincia" id="org-provincia" class="form-select">
+                <option value="">Todas</option>
+                {% for p in provincias %}
+                    <option value="{{ p }}" {% if filtros.provincia == p %}selected{% endif %}>{{ p }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="col-md-2" id="org-campo-distrito" {% if not filtros.provincia %}style="display:none;"{% endif %}>
+            <label class="form-label small">Distrito</label>
+            <select name="distrito" id="org-distrito" class="form-select">
+                <option value="">Todos os distritos</option>
+                {% if filtros.provincia %}
+                {% for d in distritos_por_provincia_json.get(filtros.provincia, []) %}
+                    <option value="{{ d }}" {% if filtros.distrito == d %}selected{% endif %}>{{ d }}</option>
+                {% endfor %}
+                {% endif %}
+            </select>
+        </div>
+        <div class="col-md-2">
+            <label class="form-label small">Área Temática</label>
+            <select name="area" class="form-select"
+                    onchange="this.form.ramificacao.value=''; this.form.submit()">
+                <option value="">Todas</option>
+                {% for a in areas_tematicas %}
+                    <option value="{{ a }}" {% if filtros.area == a %}selected{% endif %}>{{ a }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="col-md-2">
+            <label class="form-label small">Ramificação</label>
+            <select name="ramificacao" class="form-select"
+                    {% if not filtros.area %}disabled title="Escolhe primeiro uma área"{% endif %}>
+                <option value="">{{ 'Todas' if filtros.area else 'Escolhe uma área' }}</option>
+                {% for r in ramificacoes_da_area %}
+                    <option value="{{ r }}" {% if filtros.ramificacao == r %}selected{% endif %}>{{ r }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="col-md-1 d-flex align-items-end">
+            <button type="submit" class="btn btn-dark btn-sm w-100"><i class="bi bi-funnel"></i></button>
+        </div>
+    </div>
+    <div class="mt-2">
+        <span class="text-muted small">{{ total }} organização(ões) distinta(s)</span>
+    </div>
+</form>
+
+<div class="row">
+    {% for org in organizacoes %}
+    <div class="col-md-6 mb-3">
+        <div class="card h-100 shadow-sm">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-start">
+                    <div class="d-flex align-items-start gap-2">
+                        <div class="emblema-ong" style="background-color: {{ org.nome | cor_avatar }};">
+                            {{ org.nome | iniciais }}
+                        </div>
+                        <h6 class="card-title fw-bold mb-2">{{ org.nome }}{% if org.sigla %} - {{ org.sigla }}{% endif %}</h6>
+                    </div>
+                    {% if org.num_registos > 1 %}
+                    <span class="badge bg-light text-dark border" title="Número de registos de origem combinados">
+                        {{ org.num_registos }} registos
+                    </span>
+                    {% endif %}
+                </div>
+
+                <p class="mb-2 small">
+                    {% for n in org.naturezas %}<span class="badge bg-info text-dark me-1">{{ n }}</span>{% endfor %}
+                    {% for o in org.origens %}<span class="badge bg-secondary me-1">{{ o }}</span>{% endfor %}
+                </p>
+
+                <div class="small mb-1">
+                    <i class="bi bi-flag"></i> <strong>Província(s):</strong>
+                    {% if org.provincias %}
+                        {% for p in org.provincias %}<span class="badge bg-dark me-1">{{ p }}</span>{% endfor %}
+                    {% else %}<span class="text-muted">—</span>{% endif %}
+                </div>
+
+                <div class="small mb-1">
+                    <i class="bi bi-geo-alt"></i> <strong>Distrito(s)/Município(s):</strong>
+                    {% if org.distritos %}
+                        {% for d in org.distritos %}<span class="badge bg-light text-dark border me-1">{{ d }}</span>{% endfor %}
+                    {% else %}<span class="text-muted">—</span>{% endif %}
+                </div>
+
+                <div class="small mb-2">
+                    <i class="bi bi-tags"></i> <strong>Área(s) Temática(s):</strong>
+                    {% if org.areas %}
+                        {% for a in org.areas %}<span class="badge bg-dark me-1"><i class="bi {{ a | icone_area }}"></i> {{ a }}</span>{% endfor %}
+                    {% else %}<span class="text-muted">—</span>{% endif %}
+                </div>
+
+                {% if org.ramificacoes %}
+                <div class="small mb-2">
+                    <i class="bi bi-diagram-2"></i> <strong>Ramificações:</strong>
+                    {% for r in org.ramificacoes %}<span class="badge bg-light text-dark border me-1">{{ r }}</span>{% endfor %}
+                </div>
+                {% endif %}
+
+                <a href="{{ url_for('detalhe', ong_id=org.ids[0]) }}" class="btn btn-sm btn-outline-primary">
+                    Ver detalhe {% if org.num_registos > 1 %}(1º registo){% endif %}
+                </a>
+            </div>
+        </div>
+    </div>
+    {% else %}
+    <p class="text-muted">Nenhuma organização encontrada com os filtros aplicados.</p>
+    {% endfor %}
+</div>
+
+{% if total_paginas > 1 %}
+<nav class="mt-3">
+    <ul class="pagination flex-wrap">
+        {% set ns = namespace(ultimo=0) %}
+        {% for p in range(1, total_paginas + 1) %}
+        {% if p == 1 or p == total_paginas or (p >= pagina - 2 and p <= pagina + 2) %}
+        {% if p - ns.ultimo > 1 %}<li class="page-item disabled"><span class="page-link">…</span></li>{% endif %}
+        <li class="page-item {% if p == pagina %}active{% endif %}">
+            <a class="page-link" href="{{ url_for('organizacoes', pagina=p, **filtros) }}">{{ p }}</a>
+        </li>
+        {% set ns.ultimo = p %}
+        {% endif %}
+        {% endfor %}
+    </ul>
+</nav>
+{% endif %}
+<script>
+  // Caixa de distritos: aparece logo que se escolhe a província.
+  (function () {
+    const dados = {{ distritos_por_provincia_json | tojson }};
+    const selProv = document.getElementById('org-provincia');
+    const selDist = document.getElementById('org-distrito');
+    const campo = document.getElementById('org-campo-distrito');
+    selProv.addEventListener('change', function () {
+      const lista = dados[selProv.value] || [];
+      selDist.innerHTML = '<option value="">Todos os distritos</option>' +
+        lista.map(d => '<option value="' + d + '">' + d + '</option>').join('');
+      campo.style.display = selProv.value ? '' : 'none';
+      if (selProv.value) selDist.focus();
+    });
+  })();
+</script>
+{% endblock %}

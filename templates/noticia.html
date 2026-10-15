@@ -1,0 +1,39 @@
+{% extends "base.html" %}
+{% block titulo %}{{ n.titulo }}{% endblock %}
+{% block topbar_titulo %}Notícias{% endblock %}
+
+{% block conteudo %}
+<section class="hero-noticia" {% if n.imagem_url %}style="background-image:url('{{ n.imagem_url }}')"{% endif %}>
+  {% if pode_gerir_noticias %}
+  <a class="btn btn-sm btn-light hero-admin" href="{{ url_for('noticia_editar', noticia_id=n.id) }}"><i class="bi bi-pencil"></i> Editar</a>
+  {% endif %}
+  <div class="hero-noticia-corpo">
+    <span class="hero-tag">{{ n.categoria }}</span>
+    <h1>{{ n.titulo }}</h1>
+    <div class="hero-meta">
+      {% if n.autor %}<strong>{{ n.autor }}</strong><span class="sep">•</span>{% endif %}{{ n.publicado_em | data_extenso }}
+      {% if not n.publicada %}<span class="sep">•</span><span class="badge bg-warning text-dark">Rascunho</span>{% endif %}
+    </div>
+  </div>
+</section>
+
+<article class="artigo cartao">
+  {% if n.resumo %}<p style="font-size:1.15rem; font-weight:600;">{{ n.resumo }}</p>{% endif %}
+  {{ n.conteudo | paragrafos }}
+</article>
+
+{% if relacionadas %}
+<h3 class="mt-4 mb-3">Mais notícias</h3>
+<div class="row g-3">
+  {% for r in relacionadas %}
+  <div class="col-md-4">
+    <a class="noticia-cartao" href="{{ url_for('noticia_detalhe', noticia_id=r.id) }}">
+      <div class="noticia-capa" {% if r.imagem_url %}style="background-image:url('{{ r.imagem_url }}')"{% endif %}><span class="hero-tag">{{ r.categoria }}</span></div>
+      <div class="noticia-corpo"><h4>{{ r.titulo }}</h4><div class="noticia-meta">{{ r.publicado_em | data_extenso }}</div></div>
+    </a>
+  </div>
+  {% endfor %}
+</div>
+{% endif %}
+<p class="mt-3"><a href="{{ url_for('noticias_lista') }}">← Todas as notícias</a></p>
+{% endblock %}

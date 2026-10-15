@@ -1,0 +1,44 @@
+{% extends "base.html" %}
+{% block titulo %}Credenciais{% endblock %}
+{% block topbar_titulo %}Credenciais de acesso{% endblock %}
+
+{% block conteudo %}
+<section class="banner-pagina">
+  <div class="rotulo">Mostradas uma única vez</div>
+  <h1>{{ 'Palavra-passe temporária' if reposicao else 'Contas provinciais criadas' }}</h1>
+  <p>Entregue cada palavra-passe ao respectivo gestor. <strong>Não voltam a ser mostradas</strong> — ficam guardadas só cifradas. No primeiro acesso, cada pessoa é obrigada a escolher uma palavra-passe nova.</p>
+</section>
+
+{% if criadas %}
+<div class="cartao" style="overflow-x:auto;">
+  <table class="tabela-dados" id="tabelaCredenciais">
+    <thead><tr><th>Província / perfil</th><th>E-mail (entrada)</th><th>Palavra-passe temporária</th></tr></thead>
+    <tbody>
+      {% for c in criadas %}
+      <tr><td>{{ c.provincia }}</td><td>{{ c.email }}</td><td><code style="font-size:1rem;">{{ c.senha }}</code></td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  <div class="d-flex gap-2 mt-3">
+    <button class="btn btn-primary btn-sm" type="button" onclick="descarregarCsv()"><i class="bi bi-download"></i> Descarregar CSV</button>
+    <button class="btn btn-outline-secondary btn-sm" type="button" onclick="window.print()"><i class="bi bi-printer"></i> Imprimir</button>
+  </div>
+</div>
+<script>
+  function descarregarCsv() {
+    const linhas = [['Provincia','Email','Palavra-passe temporaria']];
+    document.querySelectorAll('#tabelaCredenciais tbody tr').forEach(tr =>
+      linhas.push(Array.from(tr.children).map(td => '"' + td.textContent.trim().replace(/"/g, '""') + '"')));
+    const blob = new Blob(['﻿' + linhas.map(l => l.join(';')).join('\n')], { type: 'text/csv;charset=utf-8' });
+    const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'credenciais.csv'; a.click();
+  }
+</script>
+{% else %}
+<div class="alert alert-info">Nenhuma conta nova: todas as províncias já têm Gestor Provincial.</div>
+{% endif %}
+
+{% if ignoradas %}
+<p class="text-muted mt-3">Já tinham gestor e foram ignoradas: {{ ignoradas | join(', ') }}.</p>
+{% endif %}
+<a href="{{ url_for('utilizadores') }}" class="btn btn-outline-secondary mt-2">Voltar a Utilizadores</a>
+{% endblock %}

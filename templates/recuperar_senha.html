@@ -1,0 +1,18 @@
+{% extends "base.html" %}
+{% block titulo %}Recuperar senha{% endblock %}
+{% block topbar_titulo %}Recuperar senha{% endblock %}
+{% block conteudo %}
+<div class="pagina-auth">
+  <div class="cartao-auth">
+    <h1 style="font-size:1.4rem;"><i class="bi bi-key"></i> Recuperar senha</h1>
+    <p style="color:var(--tinta-suave); font-size:0.88rem;">Escreva o e-mail da sua conta. Enviaremos uma ligação de uso único, válida durante 30 minutos.</p>
+    <form method="post">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+      <div class="campo-formulario mb-3"><label for="email">E-mail</label>
+        <input type="email" class="form-control" id="email" name="email" required autofocus autocomplete="email"></div>
+      <button type="submit" class="btn btn-primary w-100">Enviar ligação</button>
+    </form>
+    <div class="text-center mt-3"><a href="{{ url_for('login') }}" style="font-size:0.85rem;">Voltar ao login</a></div>
+  </div>
+</div>
+{% endblock %}

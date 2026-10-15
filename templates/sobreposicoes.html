@@ -1,0 +1,70 @@
+{% extends "base.html" %}
+{% block titulo %}Sobreposição de Actuação{% endblock %}
+{% block topbar_titulo %}Sobreposição de Actuação{% endblock %}
+
+{% block conteudo %}
+
+<section class="banner-pagina">
+  <div class="rotulo">Coordenação</div>
+  <h1>Sobreposição de actuação</h1>
+  <p>Várias ONGs diferentes a trabalhar na mesma actividade específica, no mesmo distrito — útil para avaliar se há coordenação entre elas.</p>
+</section>
+
+<form method="get" class="barra-filtros mb-3">
+  {% if escopo_provincia %}
+  <div class="campo-formulario" style="flex:1 1 200px;">
+    <label>Província</label>
+    <div class="form-control form-control-sm bg-light">{{ escopo_provincia }} <i class="bi bi-lock-fill text-muted"></i></div>
+  </div>
+  {% else %}
+  <div class="campo-formulario" style="flex:1 1 200px;">
+    <label for="provincia">Província</label>
+    <select class="form-select form-select-sm" id="provincia" name="provincia">
+      <option value="">Todas</option>
+      {% for p in provincias %}
+      <option value="{{ p }}" {{ 'selected' if provincia_filtro == p }}>{{ p }}</option>
+      {% endfor %}
+    </select>
+  </div>
+  {% endif %}
+  <div class="campo-formulario" style="flex:1 1 160px;">
+    <label for="limiar">Mínimo de ONGs</label>
+    <select class="form-select form-select-sm" id="limiar" name="limiar">
+      {% for n in [2, 3, 5, 10, 15, 20] %}
+      <option value="{{ n }}" {{ 'selected' if limiar == n }}>{{ n }}+ ONGs</option>
+      {% endfor %}
+    </select>
+  </div>
+  <button type="submit" class="btn btn-primary btn-sm">Filtrar</button>
+</form>
+
+<div class="contador-resultados">
+  {{ grupos | length }} grupo(s) mostrado(s){% if total_geral > grupos|length %} de {{ total_geral }} encontrados — afine os filtros para ver os restantes{% endif %}
+</div>
+
+{% for g in grupos %}
+<div class="cartao-pendencia">
+  <div class="d-flex justify-content-between align-items-start flex-wrap gap-3">
+    <div>
+      <strong>{{ g.distrito }}</strong> <span class="text-muted">({{ g.provincia }})</span>
+      <div style="font-size:0.85rem; color:var(--tinta-suave);">{{ g.area }} → {{ g.ramificacao }}</div>
+    </div>
+    <span class="badge" style="background:var(--terracota); font-size:0.9rem;">{{ g.ongs | length }} ONGs</span>
+  </div>
+  <div class="mt-2" style="font-size:0.85rem;">
+    {% for ong in g.ongs %}
+    <a href="{{ url_for('detalhe', ong_id=ong.id) }}" class="badge bg-light text-dark border me-1 mb-1" style="font-weight:400;">{{ ong.nome }}</a>
+    {% endfor %}
+  </div>
+  <form method="post" action="{{ url_for('sobreposicoes_ignorar') }}" class="mt-2">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+    <input type="hidden" name="distrito_id" value="{{ g.distrito_id }}">
+    <input type="hidden" name="ramificacao_id" value="{{ g.ramificacao_id }}">
+    <button type="submit" class="btn btn-sm btn-outline-secondary">Já está coordenado — não sinalizar mais</button>
+  </form>
+</div>
+{% else %}
+<p class="text-muted">Nenhuma sobreposição encontrada com estes filtros. Bom sinal — ou tente baixar o mínimo de ONGs.</p>
+{% endfor %}
+
+{% endblock %}

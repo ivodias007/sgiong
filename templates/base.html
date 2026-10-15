@@ -1,0 +1,413 @@
+<!DOCTYPE html>
+<html lang="pt-mz">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block titulo %}SGIONGs - Moçambique{% endblock %}</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet">
+    <link href="{{ url_for('static', filename='css/style.css') }}" rel="stylesheet">
+    {% block cabecalho_extra %}{% endblock %}
+</head>
+<body>
+
+{% if session.get('nivel') %}
+{# ==================== ÁREA INTERNA (com sessão) ==================== #}
+<div id="sidebar-overlay" onclick="fecharSidebar()"></div>
+
+<div id="sidebar">
+    <div class="sidebar-logo">
+        <img src="{{ url_for('static', filename='img/bandeira_mocambique.svg') }}"
+             alt="Bandeira de Moçambique" class="bandeira-logo">
+        SGIONGs
+        <span>Área Interna</span>
+    </div>
+
+    <nav class="sidebar-nav">
+        <a href="{{ url_for('inicio') }}"
+           class="sidebar-link {% if request.endpoint == 'inicio' %}active{% endif %}">
+            <i class="bi bi-house-door"></i> Início
+        </a>
+        <a href="{{ url_for('noticias_lista') }}"
+           class="sidebar-link {% if request.endpoint in ('noticias_lista','noticia_detalhe') %}active{% endif %}">
+            <i class="bi bi-newspaper"></i> Notícias
+        </a>
+        {% if pode_gerir_noticias %}
+        <a href="{{ url_for('noticias_admin') }}"
+           class="sidebar-link {% if request.endpoint and request.endpoint.startswith('noticia') and request.endpoint not in ('noticias_lista','noticia_detalhe') %}active{% endif %}">
+            <i class="bi bi-pencil-square"></i> Gerir notícias
+        </a>
+        {% endif %}
+        <a href="{{ url_for('index') }}"
+           class="sidebar-link {% if request.endpoint == 'index' %}active{% endif %}">
+            <i class="bi bi-list-ul"></i> Listagem
+        </a>
+        <a href="{{ url_for('organizacoes') }}"
+           class="sidebar-link {% if request.endpoint == 'organizacoes' %}active{% endif %}">
+            <i class="bi bi-building"></i> Organizações
+        </a>
+        <a href="{{ url_for('dashboard') }}"
+           class="sidebar-link {% if request.endpoint == 'dashboard' %}active{% endif %}">
+            <i class="bi bi-bar-chart-line"></i> Dashboard
+        </a>
+        <a href="{{ url_for('levantamento_nacional') }}"
+           class="sidebar-link {% if request.endpoint == 'levantamento_nacional' %}active{% endif %}">
+            <i class="bi bi-file-earmark-bar-graph"></i> Levantamento MPD
+        </a>
+
+        <div class="sidebar-divider"></div>
+
+        {% if pode_aprovar %}
+        <a href="{{ url_for('pendentes') }}"
+           class="sidebar-link {% if request.endpoint == 'pendentes' %}active{% endif %}">
+            <i class="bi bi-hourglass-split"></i> Pendentes de Aprovação
+            {% if total_pendentes %}
+            <span class="badge bg-danger rounded-pill ms-1">{{ total_pendentes }}</span>
+            {% endif %}
+        </a>
+        <a href="{{ url_for('duplicados_pagina') }}"
+           class="sidebar-link {% if request.endpoint and request.endpoint.startswith('duplicados') %}active{% endif %}">
+            <i class="bi bi-copy"></i> Possíveis Duplicados
+        </a>
+        {% if pode_ver_auditoria %}
+        <a href="{{ url_for('sobreposicoes_pagina') }}"
+           class="sidebar-link {% if request.endpoint and request.endpoint.startswith('sobreposicoes') %}active{% endif %}">
+            <i class="bi bi-people-fill"></i> Sobreposição de Actuação
+        </a>
+        {% endif %}
+        {% endif %}
+        {% if pode_ver_auditoria %}
+        <a href="{{ url_for('auditoria_geral') }}"
+           class="sidebar-link {% if request.endpoint == 'auditoria_geral' %}active{% endif %}">
+            <i class="bi bi-clock-history"></i> Auditoria
+        </a>
+        {% endif %}
+        {% if pode_gerir_utilizadores %}
+        <a href="{{ url_for('utilizadores') }}"
+           class="sidebar-link {% if request.endpoint and request.endpoint.startswith('utilizador') %}active{% endif %}">
+            <i class="bi bi-people"></i> Utilizadores
+        </a>
+        {% endif %}
+        {% if session.get('nivel') == 'superadmin' %}
+        <a href="{{ url_for('backup_pagina') }}"
+           class="sidebar-link {% if request.endpoint and request.endpoint.startswith('backup') %}active{% endif %}">
+            <i class="bi bi-cloud-arrow-down"></i> Backups
+        </a>
+        {% endif %}
+
+        <a href="{{ url_for('relatorios_pagina') }}" class="sidebar-link {% if request.endpoint and request.endpoint.startswith('relatorio') %}active{% endif %}">
+            <i class="bi bi-file-earmark-bar-graph"></i> Relatórios
+        </a>
+        <a href="{{ url_for('rascunhos') }}" class="sidebar-link {% if request.endpoint in ('rascunhos','eliminar_rascunho') %}active{% endif %}">
+            <i class="bi bi-file-earmark-text"></i> Os meus rascunhos
+        </a>
+        <a href="{{ url_for('novo') }}" class="sidebar-link">
+            <i class="bi bi-plus-circle"></i> Nova ONG
+        </a>
+        <a href="{{ url_for('importar_pagina') }}" class="sidebar-link {% if request.endpoint and request.endpoint.startswith('importar') %}active{% endif %}">
+            <i class="bi bi-file-earmark-arrow-up"></i> Importar Matriz
+        </a>
+
+        <div class="sidebar-divider"></div>
+        <a href="{{ url_for('inicio') }}" class="sidebar-link">
+            <i class="bi bi-globe2"></i> Ver portal público
+        </a>
+        <a href="{{ url_for('logout') }}" class="sidebar-link sidebar-link-logout">
+            <i class="bi bi-box-arrow-right"></i> Sair (Admin)
+        </a>
+    </nav>
+
+    <div class="sidebar-footer">
+        Direcção Nacional de<br>Promoção do Desenvolvimento Integrado
+    </div>
+</div>
+
+<div id="main-wrapper">
+
+    <header id="topbar">
+        <button id="btn-sidebar" onclick="toggleSidebar()" title="Abrir/fechar menu">
+            <i class="bi bi-list"></i>
+        </button>
+        <span class="topbar-titulo">{% block topbar_titulo %}{% block titulo2 %}SGIONGs{% endblock %}{% endblock %}</span>
+        <div class="topbar-direita d-flex align-items-center gap-3">
+            {% if pode_ver_auditoria %}
+            <div class="dropdown">
+                <button class="btn btn-sm position-relative" type="button" data-bs-toggle="dropdown"
+                        aria-expanded="false" style="background:none; border:none; color:#fff;" title="Notificações">
+                    <i class="bi bi-bell-fill" style="font-size:1.1rem;"></i>
+                    {% if total_sobreposicoes %}
+                    <span class="position-absolute badge rounded-pill bg-danger" style="top:-2px; right:-4px; font-size:0.65rem;">
+                        {{ total_sobreposicoes if total_sobreposicoes < 100 else '99+' }}
+                    </span>
+                    {% endif %}
+                </button>
+                <div class="dropdown-menu dropdown-menu-end p-0" style="min-width:340px; max-width:90vw;">
+                    <div class="px-3 py-2" style="border-bottom:1px solid var(--cinza-linha); font-weight:600; font-size:0.85rem; color:var(--verde-escuro);">
+                        <i class="bi bi-people-fill"></i> Sobreposição de actuação
+                    </div>
+                    {% if sobreposicoes_preview %}
+                        {% for g in sobreposicoes_preview %}
+                        <a href="{{ url_for('sobreposicoes_pagina') }}" class="dropdown-item py-2" style="white-space:normal;">
+                            <div style="font-size:0.85rem;"><strong>{{ g.distrito }}</strong> ({{ g.provincia }})</div>
+                            <div style="font-size:0.78rem; color:var(--tinta-suave);">{{ g.ramificacao }} — {{ g.ongs | length }} ONGs a fazer o mesmo trabalho</div>
+                        </a>
+                        {% endfor %}
+                        <a href="{{ url_for('sobreposicoes_pagina') }}" class="dropdown-item text-center py-2" style="font-size:0.82rem; font-weight:600; border-top:1px solid var(--cinza-linha);">
+                            Ver {{ 'todas as ' + total_sobreposicoes|string if total_sobreposicoes > 5 else 'todas as' }} sobreposições →
+                        </a>
+                    {% else %}
+                        <div class="px-3 py-3 text-center" style="font-size:0.85rem; color:var(--tinta-suave);">
+                            Sem sobreposições de actuação sinalizadas.
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+            {% endif %}
+            <a href="{{ url_for('conta') }}" class="topbar-admin" style="text-decoration:none;">
+                <i class="bi bi-person-check"></i>
+                <span class="topbar-admin-texto">{{ rotulo_perfil_sessao or ('Super Administrador' if session.get('nivel') == 'superadmin' else 'Administrador') }}
+                {% if session.get('provincia') %} · {{ session.get('provincia') }}{% endif %}</span>
+            </a>
+        </div>
+    </header>
+
+    <div id="alertas">
+        {% with mensagens = get_flashed_messages(with_categories=true) %}
+            {% if mensagens %}
+                {% for categoria, mensagem in mensagens %}
+                    <div class="alert alert-{{ categoria }} alert-dismissible fade show mx-3 mt-3" role="alert">
+                        {{ mensagem }}
+                        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                    </div>
+                {% endfor %}
+            {% endif %}
+        {% endwith %}
+    </div>
+
+    {% if usando_senhas_por_defeito %}
+    <div class="alert alert-danger mx-3 mt-3 mb-0">
+        <i class="bi bi-shield-exclamation"></i>
+        <strong>Aviso de segurança:</strong> uma ou ambas as contas (Admin / Super Admin) ainda usam a
+        senha de fábrica. Troque-as antes de disponibilizar o sistema publicamente
+        (defina <code>SGIONGS_ADMIN_PASSWORD_HASH</code> / <code>SGIONGS_SUPERADMIN_PASSWORD_HASH</code> — ver <code>config.py</code>).
+    </div>
+    {% endif %}
+    <main id="main-content">
+        {% block conteudo %}{% endblock %}
+    </main>
+
+    <footer id="rodape">
+        SGIONGs &middot; Sistema de Gestão de ONGs &middot; Uso interno
+    </footer>
+</div>
+
+{% else %}
+{# ==================== PORTAL PÚBLICO (sem sessão) ==================== #}
+<div id="main-wrapper" class="expandido">
+
+    <header id="topbar-publico">
+        <a href="{{ url_for('inicio') }}" class="topbar-publico-logo">
+            <img src="{{ url_for('static', filename='img/bandeira_mocambique.svg') }}"
+                 alt="Bandeira de Moçambique" class="bandeira-logo">
+            <div>
+                SGIONGs
+                <span>Portal Público de ONGs · Moçambique</span>
+            </div>
+        </a>
+
+        <nav class="nav-publico">
+            <a href="{{ url_for('inicio') }}" class="{% if request.endpoint == 'inicio' %}active{% endif %}">Início</a>
+            <a href="{{ url_for('noticias_lista') }}" class="{% if request.endpoint in ('noticias_lista','noticia_detalhe') %}active{% endif %}">Notícias</a>
+            <a href="{{ url_for('index') }}" class="{% if request.endpoint == 'index' %}active{% endif %}">Pesquisar ONGs</a>
+            <a href="{{ url_for('organizacoes') }}" class="{% if request.endpoint == 'organizacoes' %}active{% endif %}">Organizações</a>
+            <a href="{{ url_for('dashboard') }}" class="{% if request.endpoint == 'dashboard' %}active{% endif %}">Indicadores</a>
+            <a href="{{ url_for('levantamento_nacional') }}" class="{% if request.endpoint == 'levantamento_nacional' %}active{% endif %}">Levantamento MPD</a>
+        </nav>
+
+        <a href="{{ url_for('login') }}" class="btn-acesso-interno">
+            <i class="bi bi-shield-lock"></i> Acesso interno
+        </a>
+    </header>
+
+    <div id="alertas">
+        {% with mensagens = get_flashed_messages(with_categories=true) %}
+            {% if mensagens %}
+                {% for categoria, mensagem in mensagens %}
+                    <div class="alert alert-{{ categoria }} alert-dismissible fade show mx-3 mt-3" role="alert">
+                        {{ mensagem }}
+                        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                    </div>
+                {% endfor %}
+            {% endif %}
+        {% endwith %}
+    </div>
+
+    <main id="main-content">
+        {% block conteudo_publico %}{{ self.conteudo() }}{% endblock %}
+    </main>
+
+    <footer id="rodape-publico">
+        <div>
+            <strong>SGIONGs</strong> — Sistema de Gestão de Informação de ONGs<br>
+            Ministério da Planificação e Desenvolvimento · República de Moçambique
+        </div>
+        <div>
+            <a href="{{ url_for('login') }}">Acesso interno</a>
+        </div>
+    </footer>
+</div>
+{% endif %}
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+    const sidebar = document.getElementById('sidebar');
+    const overlay = document.getElementById('sidebar-overlay');
+    const mainWrapper = document.getElementById('main-wrapper');
+    const isMobile = () => window.innerWidth <= 768;
+    const CHAVE = 'sigeong_sidebar';
+
+    function aplicarEstado(aberta) {
+        if (isMobile()) {
+            if (aberta) {
+                sidebar.classList.add('aberta');
+                overlay.style.display = 'block';
+            } else {
+                sidebar.classList.remove('aberta');
+                overlay.style.display = 'none';
+            }
+        } else {
+            if (aberta) {
+                sidebar.classList.remove('fechada');
+                mainWrapper.classList.remove('expandido');
+            } else {
+                sidebar.classList.add('fechada');
+                mainWrapper.classList.add('expandido');
+            }
+        }
+    }
+
+    function toggleSidebar() {
+        if (isMobile()) {
+            const aberta = sidebar.classList.contains('aberta');
+            aplicarEstado(!aberta);
+        } else {
+            const aberta = !sidebar.classList.contains('fechada');
+            aplicarEstado(!aberta);
+            localStorage.setItem(CHAVE, aberta ? 'fechada' : 'aberta');
+        }
+    }
+
+    function fecharSidebar() {
+        aplicarEstado(false);
+    }
+
+    if (sidebar && !isMobile()) {
+        const pref = localStorage.getItem(CHAVE);
+        aplicarEstado(pref !== 'fechada');
+    }
+
+    document.querySelectorAll('#sidebar .sidebar-link').forEach(function(link) {
+        link.addEventListener('click', function() {
+            if (isMobile()) fecharSidebar();
+        });
+    });
+
+    // Toasts de flash desaparecem sozinhos ao fim de alguns segundos —
+    // continuam a poder ser fechados à mão a qualquer momento.
+    document.querySelectorAll('#alertas .alert').forEach(function(alerta) {
+        setTimeout(function() {
+            if (alerta && alerta.parentNode) {
+                alerta.style.transition = 'opacity 0.3s ease, transform 0.3s ease';
+                alerta.style.opacity = '0';
+                alerta.style.transform = 'translateX(24px)';
+                setTimeout(function() { alerta.remove(); }, 300);
+            }
+        }, 5000);
+    });
+
+    // Animação de contagem nos números em destaque (indicadores) — só na
+    // primeira vez que aparecem no ecrã, respeita preferência de menos
+    // animação do sistema operativo.
+    if (!window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+        const contadores = document.querySelectorAll('.estatistica .numero, .indicador-topo .valor');
+        if (contadores.length && 'IntersectionObserver' in window) {
+            const observador = new IntersectionObserver(function(entradas) {
+                entradas.forEach(function(entrada) {
+                    if (!entrada.isIntersecting) return;
+                    const el = entrada.target;
+                    const alvo = parseInt((el.textContent || '0').replace(/\D/g, ''), 10);
+                    if (isNaN(alvo) || el.dataset.animado) return;
+                    el.dataset.animado = '1';
+                    const duracao = 700;
+                    const inicio = performance.now();
+                    function passo(agora) {
+                        const progresso = Math.min((agora - inicio) / duracao, 1);
+                        const valorActual = Math.round(alvo * (1 - Math.pow(1 - progresso, 3)));
+                        el.textContent = valorActual.toLocaleString('pt-PT');
+                        if (progresso < 1) requestAnimationFrame(passo);
+                        else el.textContent = alvo.toLocaleString('pt-PT');
+                    }
+                    requestAnimationFrame(passo);
+                    observador.unobserve(el);
+                });
+            }, { threshold: 0.3 });
+            contadores.forEach(function(el) { observador.observe(el); });
+        }
+    }
+</script>
+
+{# ==================== ASSISTENTE (chatbot) ==================== #}
+<button id="chat-abrir" type="button" aria-label="Abrir assistente" title="Perguntas rápidas">
+    <i class="bi bi-chat-dots-fill"></i>
+</button>
+<div id="chat-painel" role="dialog" aria-label="Assistente SGIONGs" hidden>
+    <div class="chat-cabecalho">
+        <strong><i class="bi bi-robot"></i> Assistente SGIONGs</strong>
+        <button type="button" id="chat-fechar" aria-label="Fechar">&times;</button>
+    </div>
+    <div id="chat-mensagens" aria-live="polite"></div>
+    <div id="chat-sugestoes"></div>
+    <form id="chat-form" autocomplete="off">
+        <input type="text" id="chat-entrada" maxlength="200" placeholder="Escreva a sua pergunta...">
+        <button type="submit" aria-label="Enviar"><i class="bi bi-send-fill"></i></button>
+    </form>
+</div>
+<script>
+(function () {
+    const painel = document.getElementById('chat-painel'), msgs = document.getElementById('chat-mensagens'),
+          sug = document.getElementById('chat-sugestoes'), form = document.getElementById('chat-form'),
+          entrada = document.getElementById('chat-entrada');
+    const SUG_INICIAIS = ['O que é o SGIONGs?', 'Quantas ONGs estão registadas?', 'Como pesquisar uma ONG?',
+                          'Como registar uma ONG?', 'Esqueci a palavra-passe', 'O que é uma ONG, OSC e Fundação?'];
+    function bolha(texto, quem) {
+        const d = document.createElement('div'); d.className = 'chat-msg chat-' + quem; d.textContent = texto;
+        msgs.appendChild(d); msgs.scrollTop = msgs.scrollHeight; return d;
+    }
+    function chips(lista) {
+        sug.innerHTML = '';
+        (lista || []).forEach(t => { const b = document.createElement('button'); b.type = 'button'; b.textContent = t;
+            b.addEventListener('click', () => perguntar(t)); sug.appendChild(b); });
+    }
+    function perguntar(texto) {
+        if (!texto.trim()) return;
+        bolha(texto, 'user'); entrada.value = '';
+        fetch('{{ url_for("chatbot_perguntar") }}?q=' + encodeURIComponent(texto))
+            .then(r => r.json()).then(r => {
+                const d = bolha(r.resposta, 'bot');
+                if (r.ligacao) { const a = document.createElement('a'); a.href = r.ligacao[1]; a.textContent = r.ligacao[0] + ' →';
+                    a.style.display = 'block'; a.style.marginTop = '.4rem'; d.appendChild(a); }
+                chips(r.sugestoes);
+            }).catch(() => bolha('Não consegui responder agora. Tente novamente.', 'bot'));
+    }
+    function abrir() {
+        painel.hidden = false;
+        if (!msgs.children.length) { bolha('Olá! Sou o assistente do SGIONGs. Escolha uma pergunta ou escreva a sua.', 'bot'); chips(SUG_INICIAIS); }
+        entrada.focus();
+    }
+    document.getElementById('chat-abrir').addEventListener('click', () => painel.hidden ? abrir() : painel.hidden = true);
+    document.getElementById('chat-fechar').addEventListener('click', () => painel.hidden = true);
+    form.addEventListener('submit', e => { e.preventDefault(); perguntar(entrada.value); });
+})();
+</script>
+</body>
+</html>

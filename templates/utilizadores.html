@@ -1,0 +1,167 @@
+{% extends "base.html" %}
+{% block titulo %}Utilizadores{% endblock %}
+{% block topbar_titulo %}Gestão de Utilizadores{% endblock %}
+
+{% block conteudo %}
+
+<section class="banner-pagina">
+  <div class="rotulo">Acesso restrito</div>
+  <h1>Utilizadores do sistema</h1>
+  <p>Contas de acesso, cada uma com um perfil e permissões próprias.</p>
+</section>
+
+{% if 'gestor_provincial' in perfis_atribuiveis %}
+<form method="post" action="{{ url_for('criar_gestores_provinciais') }}" class="cartao mb-3 d-flex flex-wrap align-items-end gap-2"
+      onsubmit="return confirm('Criar as contas de Gestor Provincial das províncias que ainda não têm? Não cria duplicados.');">
+  <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+  <div>
+    <h3 class="mb-1"><i class="bi bi-people"></i> Contas das 11 províncias</h3>
+    <div class="form-text mb-2">Cria um Gestor Provincial por província (<em>gestor.sofala@domínio</em>, …). Quem já existe é ignorado. As palavras-passe temporárias são mostradas uma só vez.</div>
+  </div>
+  <div class="campo-formulario" style="min-width:240px;">
+    <label for="dominio">Domínio do e-mail</label>
+    <input class="form-control form-control-sm" id="dominio" name="dominio" value="sgiong.mpd.gov.mz">
+  </div>
+  <button class="btn btn-primary btn-sm" type="submit">Criar as contas provinciais em falta</button>
+</form>
+{% endif %}
+
+<div class="d-flex justify-content-between align-items-center mb-3">
+  <span class="contador-resultados mb-0">{{ utilizadores | length }} conta(s)</span>
+  {% if perfis_atribuiveis %}
+  <button type="button" class="btn btn-primary btn-sm" data-bs-toggle="modal" data-bs-target="#modalNovoUtilizador">
+    <i class="bi bi-person-plus"></i> Novo utilizador
+  </button>
+  {% endif %}
+</div>
+
+<table class="tabela-dados">
+  <thead>
+    <tr>
+      <th>Utilizador</th>
+      <th>Perfil</th>
+      <th>Província</th>
+      <th>Último acesso</th>
+      <th>Estado</th>
+      <th></th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for u in utilizadores %}
+    <tr>
+      <td>
+        <strong>{{ u.email or u.username }}</strong>
+        {% if u.nome_completo %}<div style="font-size:0.78rem; color:var(--tinta-suave);">{{ u.nome_completo }}</div>{% endif %}
+      </td>
+      <td>
+        <span class="badge" style="background:var(--verde); color:#fff;">{{ ({'super_admin':'Super Administrador','admin':'Administrador','gestor_nacional':'Gestor Nacional','gestor_provincial':'Gestor Provincial','operador':'Operador','consulta':'Consulta'})[u.perfil] or u.perfil }}</span>
+      </td>
+      <td>{{ u.provincia or '—' }}</td>
+      <td>{{ u.ultimo_login or 'Nunca' }}</td>
+      <td>
+        {% if u.activo %}
+          <span class="selo-estado selo-estado--aprovado">Activo</span>
+        {% else %}
+          <span class="selo-estado selo-estado--rejeitado">Inactivo</span>
+        {% endif %}
+      </td>
+      <td class="text-nowrap">
+        {% if u.perfil in perfis_atribuiveis %}
+        <form method="post" action="{{ url_for('repor_senha_utilizador', utilizador_id=u.id) }}" class="d-inline"
+              onsubmit="return confirm('Gerar uma palavra-passe temporária nova para esta conta?');">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+          <button type="submit" class="btn btn-sm btn-outline-secondary" title="Repor palavra-passe"><i class="bi bi-key"></i></button>
+        </form>
+        <form method="post" action="{{ url_for('repor_2fa_utilizador', utilizador_id=u.id) }}" class="d-inline"
+              onsubmit="return confirm('Desligar o 2FA desta conta (a pessoa perdeu o telemóvel/autenticador)?');">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+          <button type="submit" class="btn btn-sm btn-outline-secondary" title="Repor 2FA (recuperação)"><i class="bi bi-shield-x"></i></button>
+        </form>
+        <form method="post" action="{{ url_for('alterar_email_utilizador', utilizador_id=u.id) }}" class="d-inline"
+              onsubmit="var e = prompt('Novo e-mail para esta conta:', '{{ u.email or '' }}'); if (!e) return false; this.email.value = e; return true;">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+          <input type="hidden" name="email" value="">
+          <button type="submit" class="btn btn-sm btn-outline-secondary" title="Alterar e-mail"><i class="bi bi-envelope"></i></button>
+        </form>
+        <form method="post" action="{{ url_for('desactivar_utilizador', utilizador_id=u.id) }}" class="d-inline"
+              onsubmit="return confirm('Confirma {{ 'desactivar' if u.activo else 'reactivar' }} este utilizador?');">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+          <button type="submit" class="btn btn-sm btn-outline-secondary">
+            {{ 'Desactivar' if u.activo else 'Reactivar' }}
+          </button>
+        </form>
+        {% endif %}
+      </td>
+    </tr>
+    {% else %}
+    <tr><td colspan="6" style="text-align:center; color:var(--tinta-suave); padding:2rem;">Nenhum utilizador criado ainda.</td></tr>
+    {% endfor %}
+  </tbody>
+</table>
+
+<div class="cartao mt-3" style="max-width:640px;">
+  <h3><i class="bi bi-shield-check"></i> Perfis e permissões</h3>
+  <table class="tabela-dados">
+    <thead><tr><th>Perfil</th><th>Pode</th></tr></thead>
+    <tbody>
+      <tr><td>Super Administrador</td><td>Tudo, incluindo eliminar e gerir utilizadores</td></tr>
+      <tr><td>Administrador</td><td>Gerir dados e utilizadores (excepto eliminar ONGs)</td></tr>
+      <tr><td>Gestor Nacional</td><td>Ver, criar, editar e aprovar em todas as províncias</td></tr>
+      <tr><td>Gestor Provincial</td><td>Ver, criar, editar e aprovar — só na sua província</td></tr>
+      <tr><td>Operador</td><td>Criar e editar — não aprova nem elimina</td></tr>
+      <tr><td>Consulta</td><td>Só visualizar e pesquisar</td></tr>
+    </tbody>
+  </table>
+  <p style="font-size:0.82rem; color:var(--tinta-suave); margin:0;">
+    Ninguém aprova um registo ou edição que tenha submetido — mesmo tendo permissão geral de aprovação.
+  </p>
+</div>
+
+{% if perfis_atribuiveis %}
+<div class="modal fade" id="modalNovoUtilizador" tabindex="-1">
+  <div class="modal-dialog">
+    <form method="post" action="{{ url_for('novo_utilizador') }}" class="modal-content">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+      <div class="modal-header"><h5 class="modal-title">Novo utilizador</h5></div>
+      <div class="modal-body">
+        <div class="campo-formulario mb-3">
+          <label for="email">E-mail (é o nome de entrada)</label>
+          <input type="email" class="form-control" id="email" name="email" required autocomplete="off" placeholder="nome@mpd.gov.mz">
+        </div>
+        <div class="campo-formulario mb-3">
+          <label for="nome_completo">Nome completo</label>
+          <input type="text" class="form-control" id="nome_completo" name="nome_completo">
+        </div>
+        <div class="campo-formulario mb-3">
+          <label for="senha">Palavra-passe inicial</label>
+          <input type="password" class="form-control" id="senha" name="senha" required>
+        </div>
+        <div class="campo-formulario mb-3">
+          <label for="perfil">Perfil</label>
+          <select class="form-select" id="perfil" name="perfil" required onchange="document.getElementById('campo-provincia-utilizador').style.display = this.value === 'gestor_provincial' ? 'block' : 'none';">
+            <option value="">Seleccione...</option>
+            {% for p in perfis_atribuiveis %}
+            <option value="{{ p }}">{{ ({'super_admin':'Super Administrador','admin':'Administrador','gestor_nacional':'Gestor Nacional','gestor_provincial':'Gestor Provincial','operador':'Operador','consulta':'Consulta'})[p] }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div class="campo-formulario mb-3" id="campo-provincia-utilizador" style="display:none;">
+          <label for="provincia">Província (obrigatório para Gestor Provincial)</label>
+          <select class="form-select" id="provincia" name="provincia">
+            <option value="">Seleccione...</option>
+            {% for p in provincias %}
+            <option value="{{ p }}">{{ p }}</option>
+            {% endfor %}
+          </select>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancelar</button>
+        <button type="submit" class="btn btn-primary">Criar utilizador</button>
+      </div>
+    </form>
+  </div>
+</div>
+{% endif %}
+
+{% endblock %}
