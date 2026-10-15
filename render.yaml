@@ -1,0 +1,50 @@
+# Publicação no Render.
+# IMPORTANTE: a importação inicial NÃO corre na construção (build) — o disco
+# persistente só existe em execução. Corre no arranque e é idempotente: se a
+# base de dados já foi inicializada, recusa-se a tocar nos dados.
+# O disco persistente exige um plano pago (o plano gratuito perde tudo a cada deploy).
+services:
+  - type: web
+    name: sgiongs
+    env: python
+    plan: starter
+    buildCommand: "pip install -r requirements.txt"
+    startCommand: "python importar_dados.py && python wsgi.py"
+    healthCheckPath: /saude
+    disk:
+      name: sgiongs-dados
+      mountPath: /var/data
+      sizeGB: 2
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.11.9
+      - key: SGIONGS_PRODUCAO
+        value: "1"
+      - key: SGIONGS_DATA_DIR
+        value: /var/data
+      - key: SGIONGS_SECRET_KEY
+        generateValue: true
+      # Primeiro Super Administrador (definir no painel; só é usado se ainda não existir nenhum)
+      - key: SGIONGS_BOOTSTRAP_EMAIL
+        sync: false
+      - key: SGIONGS_BOOTSTRAP_PASSWORD
+        sync: false
+      # Recuperação de senha por e-mail (opcional; sem isto a recuperação é feita por um administrador)
+      - key: SGIONGS_SMTP_HOST
+        sync: false
+      - key: SGIONGS_SMTP_PORT
+        value: "587"
+      - key: SGIONGS_SMTP_USER
+        sync: false
+      - key: SGIONGS_SMTP_PASSWORD
+        sync: false
+      - key: SGIONGS_SMTP_FROM
+        sync: false
+      - key: SGIONGS_URL_BASE
+        sync: false
+      # Canal para ser avisado de falhas (Slack/Teams/Discord/Mattermost: URL do webhook)
+      - key: SGIONGS_ALERTA_WEBHOOK
+        sync: false
+      # Pasta EXTERNA ao disco para cópias dos backups (opcional mas recomendado)
+      - key: SGIONGS_BACKUP_EXTRA_DIR
+        sync: false
